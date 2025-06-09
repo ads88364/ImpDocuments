@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChipID 重複檢查 （TXT 開啟版本 demo_5）</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f9f9f9;
+      padding: 30px;
+      color: #333;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    input[type="file"] {
+      margin-bottom: 1em;
+    }
+
+    #result {
+      padding: 1em;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .ok {
+      color: green;
+      font-weight: bold;
+    }
+
+    .ng {
+      color: red;
+      font-weight: bold;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    #tableContainer {
+      margin-top: 20px;
+    }
+
+    .warning {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📄 ChipID 重複檢查（TXT 開啟版本）</h2>
+  <input type="file" id="csvFile" accept=".csv,.txt" />
+  <div id="warning" class="warning"></div>
+  <div id="result"></div>
+  <div id="tableContainer"></div>
+
+  <script>
+    document.getElementById("csvFile").addEventListener("change", function () {
+      const file = this.files[0];
+      const warningDiv = document.getElementById("warning");
+      const resultDiv = document.getElementById("result");
+      const tableContainer = document.getElementById("tableContainer");
+
+      warningDiv.innerHTML = "";
+      resultDiv.innerHTML = "";
+      tableContainer.innerHTML = "";
+
+      if (!file) return;
+
+      const warnings = [];
+
+      // 檢查檔案名稱是否包含 lotFile
+      if (!file.name.toLowerCase().includes("lotfile")) {
+        warnings.push("❌ 錯誤：檔名必須包含 'lotFile'");
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const lines = e.target.result.split(/\r?\n/).filter(line => line.trim() !== "");
+
+        // 尋找欄位標題位置（可能在第 0 或第 1 行）
+        let headerLineIndex = 0;
+        let header = lines[headerLineIndex].split(",");
+        if (!header.includes("ChipID") && lines.length > 1) {
+          headerLineIndex = 1;
+          header = lines[1].split(",");
+        }
+
+        // 檢查是否存在 ChipID 欄位
+        const chipIdIndex = header.indexOf("ChipID");
+        if (chipIdIndex === -1) {
+          warnings.push("❌ 錯誤：找不到 'ChipID' 欄位");
+        }
+
+        // 檢查是否含有 0.00E+00 形式
+        const badScientific = lines.some(line => /0\.00E\+00/i.test(line));
+        if (badScientific) {
+          warnings.push("⚠️ 偵測到包含 '0.00E+00'，請確認是否為誤存格式");
+        }
+
+        // 顯示所有警告訊息
+        if (warnings.length > 0) {
+          warningDiv.innerHTML = warnings.map(w => `<p class="ng">${w}</p>`).join("");
+          if (chipIdIndex === -1) return; // 找不到欄位就不繼續處理
+        }
+
+        // 分析資料列（從 header 之後開始）
+        const chipIdMap = {};
+        for (let i = headerLineIndex + 1; i < lines.length; i++) {
+          const cols = lines[i].split(",");
+          const chipId = cols[chipIdIndex]?.replace(/"/g, "").trim();
+
+          if (!chipId) continue;
+
+          if (!chipIdMap[chipId]) {
+            chipIdMap[chipId] = [];
+          }
+          chipIdMap[chipId].push(i + 1); // 行號用 1-based 顯示
+        }
+
+        // 找出重複的 ChipID
+        const duplicates = Object.entries(chipIdMap).filter(([id, rows]) => rows.length > 1);
+
+        if (duplicates.length === 0) {
+          resultDiv.innerHTML = `<p class="ok">✅ 結果：OK，沒有重複的 ChipID</p>`;
+          return;
+        }
+
+        resultDiv.innerHTML = `<p class="ng">❌ 結果：NG，共發現 ${duplicates.length} 組重複的 ChipID</p>`;
+
+        // 建立表格顯示重複結果
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+
+        const headerRow = document.createElement("tr");
+        ["index", "重複的 ChipID", "出現行數"].forEach(text => {
+          const th = document.createElement("th");
+          th.textContent = text;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        duplicates.forEach(([chipId, rows], idx) => {
+          const tr = document.createElement("tr");
+
+          const tdIndex = document.createElement("td");
+          tdIndex.textContent = idx + 1;
+          tr.appendChild(tdIndex);
+
+          const tdId = document.createElement("td");
+          tdId.textContent = chipId;
+          tr.appendChild(tdId);
+
+          const tdRows = document.createElement("td");
+          tdRows.textContent = rows.join(", ");
+          tr.appendChild(tdRows);
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+      };
+
+      // 使用 FileReader 以純文字方式開啟 .csv 或 .txt 檔案
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>

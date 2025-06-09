@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV ChipID 重複檢查</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2em;
+      background-color: #f9f9f9;
+    }
+
+    h2 {
+      color: #333;
+    }
+
+    input[type="file"] {
+      margin-bottom: 1em;
+    }
+
+    #result {
+      padding: 1em;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .ok {
+      color: green;
+      font-weight: bold;
+    }
+
+    .ng {
+      color: red;
+      font-weight: bold;
+    }
+
+    ul {
+      margin-top: 0.5em;
+      padding-left: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h2>CSV 檔案檢查 - ChipID 重複判斷</h2>
+  <input type="file" id="csvFile" accept=".csv" />
+  <div id="result"></div>
+
+  <script>
+    document.getElementById("csvFile").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      // 1. 檢查檔名是否含 lotFile
+      if (!file.name.includes("lotFile")) {
+        resultDiv.innerHTML = `<p class="ng">錯誤：檔名必須包含 "lotFile"</p>`;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+        checkChipID(text, resultDiv);
+      };
+      reader.readAsText(file);
+    });
+
+    function checkChipID(csvText, resultDiv) {
+      const lines = csvText.trim().split(/\r?\n/);
+      const headers = lines[0].split(",");
+      const chipIdIndex = headers.indexOf("ChipID");
+
+      if (chipIdIndex === -1) {
+        resultDiv.innerHTML = `<p class="ng">找不到 ChipID 欄位</p>`;
+        return;
+      }
+
+      const chipCount = {};
+      const allDuplicates = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cells = lines[i].split(",");
+        const chipId = cells[chipIdIndex].trim();
+        if (chipId) {
+          chipCount[chipId] = (chipCount[chipId] || 0) + 1;
+        }
+      }
+
+      // 收集重複的 ChipID
+      const repeatedList = [];
+      const uniqueDuplicates = [];
+
+      for (const [chipId, count] of Object.entries(chipCount)) {
+        if (count > 1) {
+          for (let i = 1; i < count; i++) {
+            repeatedList.push(chipId); // push 重複次數
+          }
+          uniqueDuplicates.push(chipId);
+        }
+      }
+
+      if (repeatedList.length > 0) {
+        resultDiv.innerHTML = `
+          <p class="ng">結果：NG（共 ${repeatedList.length} 筆重複）</p>
+          <p>重複的 ChipID（可重複）：</p>
+        `;
+
+        const ul = document.createElement("ul");
+        repeatedList.forEach(id => {
+          const li = document.createElement("li");
+          li.textContent = id;
+          ul.appendChild(li);
+        });
+        resultDiv.appendChild(ul);
+
+        const uniqueUl = document.createElement("ul");
+        uniqueUl.innerHTML = `<p>重複的 ChipID（唯一值）：</p>`;
+        uniqueDuplicates.forEach(id => {
+          const li = document.createElement("li");
+          li.textContent = id;
+          uniqueUl.appendChild(li);
+        });
+        resultDiv.appendChild(uniqueUl);
+      } else {
+        resultDiv.innerHTML = `<p class="ok">結果：OK（沒有重複的 ChipID）</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

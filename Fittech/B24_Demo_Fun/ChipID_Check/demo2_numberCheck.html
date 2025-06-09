@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV ChipID 重複檢查</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2em;
+      background-color: #f9f9f9;
+    }
+
+    h2 {
+      color: #333;
+    }
+
+    input[type="file"] {
+      margin-bottom: 1em;
+    }
+
+    #result {
+      padding: 1em;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .ok {
+      color: green;
+      font-weight: bold;
+    }
+
+    .ng {
+      color: red;
+      font-weight: bold;
+    }
+
+    ul {
+      margin-top: 0.5em;
+      padding-left: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h2>CSV 檔案檢查 - ChipID 重複判斷</h2>
+  <input type="file" id="csvFile" accept=".csv" />
+  <div id="result"></div>
+
+  <script>
+    // 當選取 CSV 檔案時觸發
+    document.getElementById("csvFile").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      // 1. 檢查檔名是否包含 lotFile，若沒有則顯示錯誤
+      if (!file.name.includes("lotFile")) {
+        resultDiv.innerHTML = `<p class="ng">錯誤：檔名必須包含 "lotFile"</p>`;
+        return;
+      }
+
+      // 2. 開始讀取 CSV 檔案內容
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+        checkChipID(text, resultDiv);
+      };
+      reader.readAsText(file);
+    });
+
+    // 3. 科學記號轉換處理函式（處理 Excel 匯出的數字問題）
+    function normalizeChipID(rawValue) {
+      let val = rawValue.trim();
+      // 如果是科學記號形式（例如 1.23E+05）
+      if (/^\d+\.?\d*e[\+\-]?\d+$/i.test(val)) {
+        const num = Number(val);
+        if (!isNaN(num)) {
+          // 將其轉換為不帶科學記號的完整字串
+          return num.toLocaleString('fullwide', { useGrouping: false });
+        }
+      }
+      return val;
+    }
+
+    // 4. 核心邏輯：檢查 ChipID 是否有重複
+    function checkChipID(csvText, resultDiv) {
+      const lines = csvText.trim().split(/\r?\n/); // 按行拆分
+      const headers = lines[1].split(","); // 標題欄位
+      const chipIdIndex = headers.indexOf("ChipID"); // 找到 ChipID 的欄位位置
+
+      if (chipIdIndex === -1) {
+        resultDiv.innerHTML = `<p class="ng">找不到 ChipID 欄位</p>`;
+        return;
+      }
+
+      const chipCount = {}; // 儲存每個 ChipID 出現次數
+      const allDuplicates = [];
+
+      // 遍歷每一行資料
+      for (let i = 1; i < lines.length; i++) {
+        const cells = lines[i].split(",");
+        const chipId = normalizeChipID(cells[chipIdIndex]); // ✅ 正規化 ChipID，處理科學記號
+        if (chipId) {
+          chipCount[chipId] = (chipCount[chipId] || 0) + 1;
+        }
+      }
+
+      // 收集所有重複的 ChipID
+      const repeatedList = []; // 出現兩次以上的會重複列出
+      const uniqueDuplicates = []; // 只列出一次的重複值（唯一值）
+
+      for (const [chipId, count] of Object.entries(chipCount)) {
+        if (count > 1) {
+          for (let i = 1; i < count; i++) {
+            repeatedList.push(chipId); // 推入次數 - 1 筆重複
+          }
+          uniqueDuplicates.push(chipId);
+        }
+      }
+
+      // ✅ 顯示結果
+      if (repeatedList.length > 0) {
+        resultDiv.innerHTML = `
+          <p class="ng">結果：NG（共 ${repeatedList.length} 筆重複）</p>
+          <p>重複的 ChipID（可重複列出）：</p>
+        `;
+
+        const ul = document.createElement("ul");
+        repeatedList.forEach(id => {
+          const li = document.createElement("li");
+          li.textContent = id;
+          ul.appendChild(li);
+        });
+        resultDiv.appendChild(ul);
+
+        const uniqueUl = document.createElement("ul");
+        uniqueUl.innerHTML = `<p>重複的 ChipID（唯一值）：</p>`;
+        uniqueDuplicates.forEach(id => {
+          const li = document.createElement("li");
+          li.textContent = id;
+          uniqueUl.appendChild(li);
+        });
+        resultDiv.appendChild(uniqueUl);
+      } else {
+        resultDiv.innerHTML = `<p class="ok">結果：OK（沒有重複的 ChipID）</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
