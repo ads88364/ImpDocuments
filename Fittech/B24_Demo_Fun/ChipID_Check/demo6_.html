@@ -172,7 +172,7 @@
         const tbody = document.createElement("tbody");
 
         const headerRow = document.createElement("tr");
-        ["編號", "重複的 ChipID", "出現行數"].forEach(text => {
+        ["編號", "重複的 ChipID", "出現行數","行數總和"].forEach(text => {
           const th = document.createElement("th");
           th.textContent = text;
           headerRow.appendChild(th);
@@ -194,6 +194,10 @@
           const tdRows = document.createElement("td");
           tdRows.textContent = rows.join(", ");
           tr.appendChild(tdRows);
+
+          const tdRowsTotal = document.createElement("td");
+          tdRowsTotal.textContent = rows.length;
+          tr.appendChild(tdRowsTotal);
 
           tbody.appendChild(tr);
         });
