@@ -1,0 +1,142 @@
+// 清空選取，確保選同一檔案也能觸發
+document.getElementById("csvFile").addEventListener("click", function () {
+  this.value = "";
+});
+
+// 當檔案選擇變更時觸發
+document.getElementById("csvFile").addEventListener("change", function () {
+  const file = this.files[0];
+  const warningDiv = document.getElementById("warning");
+  const resultDiv = document.getElementById("result");
+  const tableContainer = document.getElementById("tableContainer");
+
+  // 清空畫面內容
+  warningDiv.innerHTML = "";
+  resultDiv.innerHTML = "";
+  tableContainer.innerHTML = "";
+
+  if (!file) return;
+
+  const warnings = [];
+
+  // 1.檢查檔案名稱是否包含 'lotFile'
+  if (!file.name.toLowerCase().includes("lotfile")) {
+    warnings.push("❌ 錯誤：檔名必須包含 'lotFile'");
+  }
+
+  const reader = new FileReader();
+
+  // 2. 當讀取完成時執行以下邏輯
+  reader.onload = function (e) {
+    const lines = e.target.result
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== "");
+
+    // 3. 嘗試從第 0 或第 1 行找欄位標題
+    let headerLineIndex = 0;
+    let header = lines[headerLineIndex].split(",");
+    if (!header.includes("ChipID") && lines.length > 1) {
+      headerLineIndex = 1;
+      header = lines[1].split(",");
+    }
+
+    // 4. 檢查是否包含 ChipID 欄位
+    const chipIdIndex = header.indexOf("ChipID");
+    if (chipIdIndex === -1) {
+      warnings.push("❌ 錯誤：找不到 'ChipID' 欄位");
+    }
+
+    // 5. 檢查是否有 '0.00E+00' 科學記號格式
+    const badScientific = lines.some((line) => /0\.00E\+00/i.test(line));
+    if (badScientific) {
+      warnings.push("⚠️ 偵測到包含 '0.00E+00'，請確認是否為誤存格式");
+    }
+
+    // 6. 顯示所有警告訊息
+    if (warnings.length > 0) {
+      warningDiv.innerHTML = warnings
+        .map((w) => `<p class="ng">${w}</p>`)
+        .join("");
+      if (chipIdIndex === -1) return; // 若找不到 ChipID 就不處理
+    }
+
+    const chipIdMap = {};
+    const totalDataRows = lines.length - (headerLineIndex + 1); // ✅ 計算總資料筆數（不含標題）
+
+    // 7. 將每筆 ChipID 記錄下來對應行數
+    for (let i = headerLineIndex + 1; i < lines.length; i++) {
+      const cols = lines[i].split(",");
+      const chipId = cols[chipIdIndex]?.replace(/"/g, "").trim();
+      if (!chipId) continue;
+
+      if (!chipIdMap[chipId]) {
+        chipIdMap[chipId] = [];
+      }
+      chipIdMap[chipId].push(i + 1); // 行號（1-based）
+    }
+
+    // 8. 找出重複出現的 ChipID
+    const duplicates = Object.entries(chipIdMap).filter(
+      ([id, rows]) => rows.length > 1
+    );
+    const totalDuplicateCount = duplicates.reduce(
+      (sum, [, rows]) => sum + rows.length,
+      0
+    );
+
+    // 9. 顯示結果：OK 或 NG，附加統計
+    if (duplicates.length === 0) {
+      resultDiv.innerHTML = `<p class="ok">✅ 結果：OK，沒有重複的 ChipID，總筆數為 ${totalDataRows} 筆</p>`;
+      return;
+    }
+
+    resultDiv.innerHTML = `
+            <p class="ng">❌ 結果：NG，共發現 ${duplicates.length} 組重複的 ChipID</p>
+            <p>📌 總筆數：${totalDataRows} 筆</p>
+            <p>🔁 重複總筆數：${totalDuplicateCount} 筆</p>
+            `;
+
+    // 10. 建立表格顯示每一組重複的 ChipID
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+
+    const headerRow = document.createElement("tr");
+    ["編號", "重複的 ChipID", "出現行數", "行數總和"].forEach((text) => {
+      const th = document.createElement("th");
+      th.textContent = text;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    // 11. 填入每一組重複的資料列
+    duplicates.forEach(([chipId, rows], idx) => {
+      const tr = document.createElement("tr");
+
+      const tdIndex = document.createElement("td");
+      tdIndex.textContent = idx + 1;
+      tr.appendChild(tdIndex);
+
+      const tdId = document.createElement("td");
+      tdId.textContent = chipId;
+      tr.appendChild(tdId);
+
+      const tdRows = document.createElement("td");
+      tdRows.textContent = rows.join(", ");
+      tr.appendChild(tdRows);
+
+      const tdRowsTotal = document.createElement("td");
+      tdRowsTotal.textContent = rows.length;
+      tr.appendChild(tdRowsTotal);
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+  };
+
+  // 使用純文字方式讀取 CSV 或 TXT 檔
+  reader.readAsText(file);
+});
