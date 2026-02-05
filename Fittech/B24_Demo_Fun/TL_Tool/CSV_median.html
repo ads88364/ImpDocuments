@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Median Calculator</title>
+<style>
+  body {
+    font-family: "Work Sans", "Inter", "Noto Sans TC", sans-serif;
+    background: #f6f6f6;
+    padding: 24px;
+    color: #222;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  input[type="file"] {
+    margin-bottom: 12px;
+  }
+
+  .field-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 6px 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+
+  .field-list label {
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  button {
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #000;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th, td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  th {
+    background: #f0f0f0;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<h2>光環中位數小工具</h2>
+
+<div class="card">
+  <input type="file" id="fileInput" accept=".csv">
+  <div class="field-list" id="fieldList">
+    請先上傳 CSV
+  </div>
+  <button onclick="calculateMedian()">計算中位數</button>
+</div>
+
+<div class="card">
+  <table id="resultTable">
+    <thead>
+      <tr>
+        <th>欄位名稱</th>
+        <th>Median</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let csvData = [];
+let headers = [];
+
+document.getElementById("fileInput").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const lines = reader.result.trim().split("\n");
+
+    // ⭐ 欄位名稱來自第二列
+    headers = lines[1].split(",");
+
+    // ⭐ 實際數據從第三列開始
+    csvData = lines.slice(2).map(line =>
+      line.split(",").map(v => v.trim())
+    );
+
+    renderFieldList();
+  };
+
+  reader.readAsText(file);
+});
+
+function renderFieldList() {
+  const container = document.getElementById("fieldList");
+  container.innerHTML = "";
+
+  headers.forEach((h, i) => {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <input type="checkbox" value="${i}">
+      ${h}
+    `;
+    container.appendChild(label);
+  });
+}
+
+function calculateMedian() {
+  const checked = [...document.querySelectorAll(".field-list input:checked")];
+  const tbody = document.querySelector("#resultTable tbody");
+  tbody.innerHTML = "";
+
+  checked.forEach(cb => {
+    const idx = parseInt(cb.value);
+    const values = csvData
+      .map(row => parseFloat(row[idx]))
+      .filter(v => !isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (values.length === 0) return;
+
+    const mid = Math.floor(values.length / 2);
+    const median = values.length % 2
+      ? values[mid]
+      : (values[mid - 1] + values[mid]) / 2;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${headers[idx]}</td>
+      <td>${median}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+
+
+</body>
+</html>

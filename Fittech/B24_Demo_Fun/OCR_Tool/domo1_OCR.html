@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>16進位產生器</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 24px 28px;
+      border-radius: 12px;
+      width: 360px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      text-align: center;
+      font-size: 18px;
+      color: #333;
+    }
+
+    label {
+      font-size: 13px;
+      color: #555;
+      margin-top: 12px;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #2f80ed;
+      color: #fff;
+    }
+
+    button.desc {
+      background: #6c757d;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    textarea {
+      width: 100%;
+      margin-top: 16px;
+      height: 140px;
+      resize: none;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Hex Code Generator</h2>
+
+    <label>起始四碼英數字</label>
+    <input id="startCode" placeholder="例如：11A6" maxlength="4" />
+
+    <label>產生數量</label>
+    <input id="count" type="number" min="1" placeholder="例如：10" />
+
+    <div class="buttons">
+      <button onclick="generate('asc')">升冪</button>
+      <button class="desc" onclick="generate('desc')">降冪</button>
+    </div>
+
+    <textarea id="output" placeholder="結果會顯示在這裡"></textarea>
+  </div>
+
+  <script>
+    function generate(order) {
+      const start = document.getElementById("startCode").value.trim().toUpperCase();
+      const count = parseInt(document.getElementById("count").value);
+      const output = document.getElementById("output");
+
+      if (!/^[0-9A-F]{4}$/.test(start)) {
+        alert("請輸入正確的 4 碼 16 進位英數字");
+        return;
+      }
+
+      if (isNaN(count) || count <= 0) {
+        alert("請輸入正確的數量");
+        return;
+      }
+
+      const prefix = start.slice(0, 2);
+      let suffix = parseInt(start.slice(2), 16);
+
+      let results = [];
+
+      for (let i = 0; i < count; i++) {
+        let value = suffix + (order === "asc" ? i : -i);
+        if (value < 0 || value > 255) break;
+
+        let hexSuffix = value.toString(16).toUpperCase().padStart(2, "0");
+        results.push(prefix + hexSuffix);
+      }
+
+      output.value = results.join("\n");
+    }
+  </script>
+</body>
+</html>

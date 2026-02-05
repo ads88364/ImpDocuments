@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>16進位產生器一次產多組(直)</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f2f4f7;
+      display: flex;
+      justify-content: center;
+      padding-top: 40px;
+    }
+
+    .container {
+      background: #fff;
+      width: 480px;
+      padding: 24px 28px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 18px;
+      color: #333;
+    }
+
+    label {
+      font-size: 13px;
+      color: #555;
+      margin-top: 14px;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #2f80ed;
+      color: white;
+    }
+
+    button.gray {
+      background: #6c757d;
+    }
+
+    button.small {
+      height: 36px;
+      white-space: nowrap;
+    }
+
+    .dynamic-inputs {
+      margin-top: 12px;
+    }
+
+    .dynamic-inputs input {
+      margin-top: 6px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      margin-top: 18px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      resize: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>16進位產生器一次產多組(直)</h2>
+
+    <label>前兩碼（固定）</label>
+    <input id="prefix" maxlength="2" placeholder="例如：11 / AB" />
+
+    <label>每組產生數量</label>
+    <input id="sequenceCount" type="number" min="1" placeholder="例如：5" />
+
+    <label>起始值組數</label>
+    <div class="row">
+      <input id="groupCount" type="number" min="1" placeholder="例如：3" />
+      <button class="small" onclick="createGroups()">確定</button>
+    </div>
+
+    <div class="dynamic-inputs" id="groups"></div>
+
+    <div class="buttons">
+      <button onclick="generate('asc')">升冪</button>
+      <button class="gray" onclick="generate('desc')">降冪</button>
+    </div>
+
+    <textarea id="output" placeholder="產生結果會顯示在這裡"></textarea>
+  </div>
+
+  <script>
+    function createGroups() {
+      const count = parseInt(document.getElementById("groupCount").value);
+      const container = document.getElementById("groups");
+      container.innerHTML = "";
+
+      if (isNaN(count) || count <= 0) {
+        alert("請輸入正確的組數");
+        return;
+      }
+
+      for (let i = 0; i < count; i++) {
+        const input = document.createElement("input");
+        input.placeholder = `第 ${i + 1} 組起始兩碼（00–FF）`;
+        input.maxLength = 2;
+        container.appendChild(input);
+      }
+    }
+
+    function generate(order) {
+      const prefix = document.getElementById("prefix").value.toUpperCase();
+      const seqCount = parseInt(document.getElementById("sequenceCount").value);
+      const groupInputs = document.querySelectorAll("#groups input");
+      const output = document.getElementById("output");
+
+      if (!/^[0-9A-F]{2}$/.test(prefix)) {
+        alert("前兩碼需為 2 碼 16 進位英數字");
+        return;
+      }
+
+      if (isNaN(seqCount) || seqCount <= 0) {
+        alert("請輸入正確的產生數量");
+        return;
+      }
+
+      let resultLines = [];
+
+      groupInputs.forEach((input, index) => {
+        const startHex = input.value.toUpperCase();
+
+        if (!/^[0-9A-F]{2}$/.test(startHex)) {
+          resultLines.push(`❌ 第 ${index + 1} 組輸入錯誤`);
+          return;
+        }
+
+        let startValue = parseInt(startHex, 16);
+
+        for (let i = 0; i < seqCount; i++) {
+          let value = startValue + (order === "asc" ? i : -i);
+          if (value < 0 || value > 255) break;
+
+          let hex = value.toString(16).toUpperCase().padStart(2, "0");
+          resultLines.push(prefix + hex);
+        }
+
+        resultLines.push(""); // 空行分組
+      });
+
+      output.value = resultLines.join("\n");
+    }
+  </script>
+</body>
+</html>

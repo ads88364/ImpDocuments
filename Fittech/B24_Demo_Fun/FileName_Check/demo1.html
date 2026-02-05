@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>倒數第三段重複檢查</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      padding: 30px;
+    }
+    .ok { color: green; font-weight: bold; }
+    .ng { color: red; font-weight: bold; }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h2>📁 資料夾名稱倒數第三段重複檢查</h2>
+  <input type="file" id="folderPicker" webkitdirectory directory multiple />
+  <div id="result"></div>
+  <div id="tableContainer"></div>
+
+  <script>
+    document.getElementById("folderPicker").addEventListener("change", function () {
+      const files = this.files;
+      const resultDiv = document.getElementById("result");
+      const tableContainer = document.getElementById("tableContainer");
+      resultDiv.innerHTML = "";
+      tableContainer.innerHTML = "";
+
+      const folderNames = new Set();
+
+      // 🔍 收集所有資料夾名稱
+      for (const file of files) {
+        const parts = file.webkitRelativePath.split("/"); // 拆成路徑陣列
+        if (parts.length >= 2) {
+          folderNames.add(parts[0]); // 取第一層資料夾名稱（父資料夾中的子資料夾）
+        }
+      }
+
+      const seen = {};
+      const duplicates = [];
+
+      [...folderNames].forEach((folderName) => {
+        const parts = folderName.split("_");
+        if (parts.length < 3) return;
+
+        const key = parts[parts.length - 3]; // 倒數第三段
+        if (!seen[key]) {
+          seen[key] = [];
+        }
+        seen[key].push(folderName);
+      });
+
+      Object.entries(seen).forEach(([key, folders]) => {
+        if (folders.length > 1) {
+          duplicates.push({ key, folders });
+        }
+      });
+
+      if (duplicates.length === 0) {
+        resultDiv.innerHTML = `<p class="ok">✅ 沒有重複的倒數第三段</p>`;
+      } else {
+        resultDiv.innerHTML = `<p class="ng">❌ 發現 ${duplicates.length} 組重複的倒數第三段</p>`;
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+
+        const headerRow = document.createElement("tr");
+        ["重複值", "出現於資料夾"].forEach(text => {
+          const th = document.createElement("th");
+          th.textContent = text;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        duplicates.forEach(item => {
+          const tr = document.createElement("tr");
+
+          const tdKey = document.createElement("td");
+          tdKey.textContent = item.key;
+          tr.appendChild(tdKey);
+
+          const tdFolders = document.createElement("td");
+          tdFolders.textContent = item.folders.join(", ");
+          tr.appendChild(tdFolders);
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+      }
+    });
+  </script>
+</body>
+</html>
