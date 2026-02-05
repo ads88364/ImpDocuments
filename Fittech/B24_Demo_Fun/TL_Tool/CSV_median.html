@@ -1,174 +1,280 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<title>Median Calculator</title>
-<style>
-  body {
-    font-family: "Work Sans", "Inter", "Noto Sans TC", sans-serif;
-    background: #f6f6f6;
-    padding: 24px;
-    color: #222;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Median Calculator</title>
+    <style>
+      body {
+        font-family: "Work Sans", "Inter", "Noto Sans TC", sans-serif;
+        background: #f6f6f6;
+        padding: 24px;
+        color: #222;
+      }
 
-  h2 {
-    font-size: 20px;
-    margin-bottom: 16px;
-  }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 16px;
+      }
 
-  .card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
 
-  input[type="file"] {
-    margin-bottom: 12px;
-  }
+      input[type="file"] {
+        margin-bottom: 12px;
+      }
 
-  .field-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 6px 12px;
-    max-height: 220px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 10px;
-    border-radius: 4px;
-    background: #fafafa;
-  }
+      .field-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 6px 12px;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 4px;
+        background: #fafafa;
+      }
 
-  .field-list label {
-    font-size: 13px;
-    cursor: pointer;
-  }
+      .field-list label {
+        font-size: 13px;
+        cursor: pointer;
+      }
 
-  button {
-    margin-top: 12px;
-    padding: 8px 18px;
-    background: #333;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
+      button {
+        margin-top: 12px;
+        padding: 8px 18px;
+        background: #333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
 
-  button:hover {
-    background: #000;
-  }
+      button:hover {
+        background: #000;
+      }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
 
-  th, td {
-    border-bottom: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
+      th,
+      td {
+        border-bottom: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
 
-  th {
-    background: #f0f0f0;
-    font-weight: 600;
-  }
-</style>
-</head>
-<body>
+      th {
+        background: #f0f0f0;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>光環中位數小工具</h2>
 
-<h2>光環中位數小工具</h2>
+    <div class="card">
+      <input type="file" id="fileInput" accept=".csv" />
+      <div class="field-list" id="fieldList">請先上傳 CSV</div>
+      <button onclick="calculateMedian()">計算中位數</button>
+    </div>
 
-<div class="card">
-  <input type="file" id="fileInput" accept=".csv">
-  <div class="field-list" id="fieldList">
-    請先上傳 CSV
-  </div>
-  <button onclick="calculateMedian()">計算中位數</button>
-</div>
+    <div class="card">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Stage1 Median</th>
+            <th>Stage2 Median</th>
+          </tr>
+        </thead>
 
-<div class="card">
-  <table id="resultTable">
-    <thead>
-      <tr>
-        <th>欄位名稱</th>
-        <th>Median</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+        <tbody></tbody>
+      </table>
+    </div>
 
-<script>
-let csvData = [];
-let headers = [];
+    <script>
+      // 不需要項目
+      const excludedFields = [
+        "ChipID",
+        "BinX",
+        "BinY",
+        "TestTemp",
+        "SetTemp",
+        "TestStation",
+        "TestTimeStart",
+        "TestTimeEnd",
+        "IsManualOCR",
+        "IsNonLuminous",
+        "ProbePositionX",
+        "ProbePositionY",
+        "ProbeForce_LD",
+        "ProbeForce_EA",
+        "ProbeForce_SOA",
+        "",
+      ];
 
-document.getElementById("fileInput").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  const reader = new FileReader();
+      // 預設勾選項目
+      const defaultCheckedFields = [
+        "IthN1",
+        "Iop1N1",
+        "Vop1N1",
+        "PmaxN1",
+        "SEf1N1",
+        "Kink2N1",
+        "centerWLN12",
+        "SMSRN12",
+      ];
 
-  reader.onload = () => {
-    const lines = reader.result.trim().split("\n");
+      let csvData = [];
+      let headers = [];
 
-    // ⭐ 欄位名稱來自第二列
-    headers = lines[1].split(",");
+      //----------------------- 宣告區 ----------------------------//
 
-    // ⭐ 實際數據從第三列開始
-    csvData = lines.slice(2).map(line =>
-      line.split(",").map(v => v.trim())
-    );
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
 
-    renderFieldList();
-  };
+          reader.onload = () => {
+            const lines = reader.result.trim().split("\n");
 
-  reader.readAsText(file);
-});
+            // ⭐ 欄位名稱來自第二列
+            headers = lines[1].split(",");
 
-function renderFieldList() {
-  const container = document.getElementById("fieldList");
-  container.innerHTML = "";
+            // ⭐ 實際數據從第三列開始
+            csvData = lines
+              .slice(2)
+              .map((line) => line.split(",").map((v) => v.trim()));
 
-  headers.forEach((h, i) => {
-    const label = document.createElement("label");
-    label.innerHTML = `
-      <input type="checkbox" value="${i}">
-      ${h}
+            renderFieldList();
+          };
+
+          reader.readAsText(file);
+        });
+
+      function median(values) {
+        if (!Array.isArray(values) || values.length === 0) {
+          return null; // 沒資料就不要算
+        }
+
+        const nums = values
+          .map((v) => Number(v)) // 強制轉數字
+          .filter((v) => Number.isFinite(v)) // 排除 NaN / Infinity
+          .sort((a, b) => a - b);
+
+        if (nums.length === 0) {
+          return null;
+        }
+
+        const mid = Math.floor(nums.length / 2);
+
+        if (nums.length % 2 !== 0) {
+          return nums[mid];
+        } else {
+          return (nums[mid - 1] + nums[mid]) / 2;
+        }
+      }
+
+      function renderFieldList() {
+        const container = document.getElementById("fieldList");
+        container.innerHTML = "";
+
+        headers.forEach((h, i) => {
+          const fieldName = h.replace(/\r/g, "").trim();
+
+          if (excludedFields.includes(fieldName)) return;
+
+          const isChecked = defaultCheckedFields.includes(fieldName);
+
+          const label = document.createElement("label");
+          label.innerHTML = `
+    <input type="checkbox" value="${i}" ${isChecked ? "checked" : ""}>
+    ${fieldName}
+  `;
+          container.appendChild(label);
+        });
+      }
+
+      function calculateMedian() {
+        const tbody = document.querySelector("#resultTable tbody");
+        tbody.innerHTML = "";
+
+        if (!headers.length || !csvData.length) {
+          alert("請先上傳 CSV 檔案");
+          return;
+        }
+
+        const testStationIndex = headers.findIndex(
+          (h) => h.replace(/\r/g, "").trim() === "TestStation",
+        );
+
+        if (testStationIndex === -1) {
+          alert("找不到 TestStation 欄位");
+          return;
+        }
+
+        // Stage 分組
+        const stageGroups = {};
+        csvData.forEach((row) => {
+          const stage = row[testStationIndex]?.trim();
+          if (!stage) return;
+
+          if (!stageGroups[stage]) {
+            stageGroups[stage] = [];
+          }
+          stageGroups[stage].push(row);
+        });
+
+        const selectedIndexes = [
+          ...document.querySelectorAll(".field-list input:checked"),
+        ].map((cb) => Number(cb.value));
+
+        // 結果結構：Parameter -> Stage -> Median
+        const result = {};
+
+        selectedIndexes.forEach((colIndex) => {
+          const param = headers[colIndex];
+          result[param] = {};
+
+          ["Stage1", "Stage2"].forEach((stage) => {
+            const rows = stageGroups[stage];
+            if (!rows) return;
+
+            const values = rows
+              .map((r) => Number(r[colIndex]))
+              .filter((v) => Number.isFinite(v));
+
+            const m = median(values);
+            if (m !== null) {
+              result[param][stage] = m;
+            }
+          });
+        });
+
+        // 畫表格
+        Object.keys(result).forEach((param) => {
+          const s1 = result[param].Stage1 ?? "—";
+          const s2 = result[param].Stage2 ?? "—";
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+      <td>${param}</td>
+      <td>${s1}</td>
+      <td>${s2}</td>
     `;
-    container.appendChild(label);
-  });
-}
-
-function calculateMedian() {
-  const checked = [...document.querySelectorAll(".field-list input:checked")];
-  const tbody = document.querySelector("#resultTable tbody");
-  tbody.innerHTML = "";
-
-  checked.forEach(cb => {
-    const idx = parseInt(cb.value);
-    const values = csvData
-      .map(row => parseFloat(row[idx]))
-      .filter(v => !isNaN(v))
-      .sort((a, b) => a - b);
-
-    if (values.length === 0) return;
-
-    const mid = Math.floor(values.length / 2);
-    const median = values.length % 2
-      ? values[mid]
-      : (values[mid - 1] + values[mid]) / 2;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${headers[idx]}</td>
-      <td>${median}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-</script>
-
-
-</body>
+          tbody.appendChild(tr);
+        });
+      }
+    </script>
+  </body>
 </html>
