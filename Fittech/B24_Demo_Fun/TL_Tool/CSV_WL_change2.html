@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV 數值修正工具</title>
+  <style>
+    :root {
+      --primary-color: #2c3e50;
+      --accent-color: #3498db;
+      --bg-color: #f9f9f9;
+      --card-bg: #ffffff;
+      --text-color: #333;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 1.5rem;
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+
+    .upload-area {
+      border: 2px dashed #ddd;
+      padding: 2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.3s;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-area:hover {
+      border-color: var(--accent-color);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      width: 100%;
+      transition: opacity 0.3s;
+    }
+
+    .btn:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    #status {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .logic-hint {
+      text-align: left;
+      font-size: 0.8rem;
+      color: #888;
+      background: #f0f2f5;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+
+    .box{
+      margin-top: 5rem;
+      margin-bottom: 5rem;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>CSV 修正工具</h2>
+
+    <div class="logic-hint">
+      <strong>修正邏輯：</strong><br>
+      1. 僅針對 <b>Stage2</b> 的資料。<br>
+      2. <b>centerWLN12</b> 欄位數值減去 0.34。<br>
+      3. Stage1 保持不變。
+    </div>
+
+    <div class="box">
+      <label class="upload-area" id="drop-zone">
+        <span id="file-name">點擊或拖放 CSV 檔案至此</span>
+        <input type="file" id="csv-file" accept=".csv">
+      </label>
+    </div>
+
+    <button id="process-btn" class="btn" disabled>處理並下載檔案</button>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('csv-file');
+    const dropZone = document.getElementById('drop-zone');
+    const fileNameDisplay = document.getElementById('file-name');
+    const processBtn = document.getElementById('process-btn');
+    const status = document.getElementById('status');
+
+    let currentFile = null;
+
+    // 檔案選取處理
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        currentFile = e.target.files[0];
+        fileNameDisplay.textContent = currentFile.name;
+        processBtn.disabled = false;
+        status.textContent = "檔案已就緒";
+      }
+    });
+
+    // 處理邏輯
+    processBtn.addEventListener('click', () => {
+      if (!currentFile) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/);
+
+        if (lines.length < 2) {
+          status.textContent = "錯誤：檔案內容不足";
+          return;
+        }
+
+        // 處理第一行 Metadata 與 第二行 Header
+        const metadata = lines[0];
+        const header = lines[1].split(',');
+
+        // 尋找目標欄位索引
+        const stationIdx = header.indexOf('TestStation');
+        const wlIdx = header.indexOf('centerWLN12');
+
+        if (stationIdx === -1 || wlIdx === -1) {
+          status.textContent = "錯誤：找不到必要的欄位名稱";
+          return;
+        }
+
+        const processedLines = lines.slice(2).map(line => {
+          if (!line.trim()) return line;
+          let columns = line.split(',');
+
+          // 條件篩選：TestStation == 'Stage2'
+          if (columns[stationIdx] === 'Stage2') {
+            let originalVal = parseFloat(columns[wlIdx]);
+            if (!isNaN(originalVal)) {
+              // 執行動作：減去 0.34，保留小數位數避免浮點數誤差
+              columns[wlIdx] = (originalVal - 0.34).toFixed(4).replace(/\.?0+$/, "");
+            }
+          }
+          return columns.join(',');
+        });
+
+        // 重新組合檔案
+        const finalCsv = [metadata, lines[1], ...processedLines].join('\n');
+
+        // 下載檔案
+        downloadCsv(finalCsv, currentFile.name);
+        status.textContent = "處理完成，已開始下載！";
+      };
+
+      reader.readAsText(currentFile);
+    });
+
+    function downloadCsv(content, fileName) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName); // 檔名保持不變
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+
+</body>
+
+</html>
