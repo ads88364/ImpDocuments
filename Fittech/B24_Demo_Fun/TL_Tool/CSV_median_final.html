@@ -1,315 +1,353 @@
 <!doctype html>
 <html lang="zh-Hant">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Median Calculator</title>
-    <style>
-      body {
-        font-family: "Work Sans", "Inter", "Noto Sans TC", sans-serif;
-        background: #f6f6f6;
-        padding: 24px;
-        color: #222;
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Median Calculator</title>
+  <style>
+    body {
+      font-family: "Work Sans", "Inter", "Noto Sans TC", sans-serif;
+      background: #f6f6f6;
+      padding: 24px;
+      color: #222;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    input[type="file"] {
+      margin-bottom: 12px;
+    }
+
+    .field-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 6px 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+
+    .field-list label {
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 8px 18px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #000;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+      font-weight: 600;
+    }
+
+    #fileNameA {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    #fileNameB {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    #fileInputA {
+      margin-top: 10px;
+    }
+
+    #fileInputB {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>光環中位數小工具</h2>
+
+  <div class="card">
+    <input type="file" id="fileInputA" accept=".csv" />
+    <div id="fileNameA"></div>
+
+    <input type="file" id="fileInputB" accept=".csv" />
+    <div id="fileNameB"></div>
+
+    <div class="field-list" id="fieldList">請先上傳 CSV</div>
+    <button onclick="calculateMedian()">計算中位數</button>
+  </div>
+
+  <div class="card">
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>A Stage1</th>
+          <th>A Stage2</th>
+          <th>B Stage1</th>
+          <th>B Stage2</th>
+        </tr>
+      </thead>
+
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    // 不需要項目
+    const excludedFields = [
+      "ChipID",
+      "BinX",
+      "BinY",
+      "TestTemp",
+      "SetTemp",
+      "TestStation",
+      "TestTimeStart",
+      "TestTimeEnd",
+      "IsManualOCR",
+      "IsNonLuminous",
+      "ProbePositionX",
+      "ProbePositionY",
+      "ProbeForce_LD",
+      "ProbeForce_EA",
+      "ProbeForce_SOA",
+      "",
+    ];
+
+    // 預設勾選項目
+    const defaultCheckedFields = [
+      "IthN1",
+      "Iop1N1",
+      "Vop1N1",
+      "PmaxN1",
+      "SEf1N1",
+      "Kink2N1",
+      "centerWLN12",
+      "SMSRN12",
+    ];
+
+    let dataA = { headers: [], rows: [] };
+    let dataB = { headers: [], rows: [] };
+    let fileA = "";
+    let fileB = "";
+
+    //----------------------- 宣告區 ----------------------------//
+
+    function handleFileInput(file, targetData) {
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const lines = reader.result.trim().split("\n");
+
+        //從哪一行讀取欄位
+        const headers = lines[1].split(",").map((h) => h.trim());
+
+        const rows = lines
+          .slice(2) // 從哪一行開始讀取資料
+          .map((line) => line.split(",").map((v) => v.trim()));
+
+        targetData.headers = headers;
+        targetData.rows = rows;
+
+        renderFieldList();
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById("fileInputA").addEventListener("change", (e) => {
+      handleFileInput(e.target.files[0], dataA);
+      fileA = e.target.files[0].name;
+      document.getElementById("fileNameA").textContent = `檔案 A：${fileA}`;
+
+      //console.log(e.target.files[0], "===========檔案內容");
+      //console.log(e.target.files[0].name, "===========檔案名稱");
+    });
+
+    document.getElementById("fileInputB").addEventListener("change", (e) => {
+      fileB = e.target.files[0].name;
+      document.getElementById("fileNameB").textContent = `檔案 B：${fileB}`;
+      handleFileInput(e.target.files[0], dataB);
+    });
+
+    function renderFieldList() {
+      const container = document.getElementById("fieldList");
+      container.innerHTML = "";
+
+      const headers = dataA.headers.length ? dataA.headers : dataB.headers;
+      if (!headers.length) {
+        container.innerHTML = "請先上傳 CSV";
+        return;
       }
 
-      h2 {
-        font-size: 20px;
-        margin-bottom: 16px;
-      }
+      headers.forEach((h, i) => {
+        const fieldName = h.replace(/\r/g, "").trim();
+        if (excludedFields.includes(fieldName)) return;
+        const isChecked = defaultCheckedFields.includes(fieldName);
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" value="${i}" ${isChecked ? "checked" : ""}> ${fieldName}`;
+        container.appendChild(label);
+      });
+    }
 
-      .card {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        padding: 16px;
-        margin-bottom: 16px;
-      }
+    function analyzeCSV(headers, rows, selectedIndexes) {
+      if (!headers.length || !rows.length) return {};
+      const result = {};
+      const testStationIndex = headers.findIndex(
+        (h) => h.replace(/\r/g, "").trim() === "TestStation",
+      );
+      if (testStationIndex === -1) return result;
 
-      input[type="file"] {
-        margin-bottom: 12px;
-      }
-
-      .field-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 6px 12px;
-        max-height: 220px;
-        overflow-y: auto;
-        border: 1px solid #ddd;
-        padding: 10px;
-        border-radius: 4px;
-        background: #fafafa;
-      }
-
-      .field-list label {
-        font-size: 13px;
-        cursor: pointer;
-      }
-
-      button {
-        margin-top: 12px;
-        padding: 8px 18px;
-        background: #333;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      button:hover {
-        background: #000;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-      }
-
-      th,
-      td {
-        border-bottom: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-
-      th {
-        background: #f0f0f0;
-        font-weight: 600;
-      }
-
-      #fileNameA {
-        font-size: 16px;
-        color: #555;
-        margin-bottom: 10px;
-      }
-
-      #fileNameB {
-        font-size: 16px;
-        color: #555;
-        margin-bottom: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>光環中位數小工具</h2>
-
-    <div class="card">
-      <div id="fileNameA">
-        <input type="file" id="fileInputA" accept=".csv" />
-      </div>
-
-      <div id="fileNameB">
-        <input type="file" id="fileInputB" accept=".csv" />
-      </div>
-
-      <div class="field-list" id="fieldList">請先上傳 CSV</div>
-      <button onclick="calculateMedian()">計算中位數</button>
-    </div>
-
-    <div class="card">
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th>Parameter</th>
-            <th>A Stage1</th>
-            <th>A Stage2</th>
-            <th>B Stage1</th>
-            <th>B Stage2</th>
-          </tr>
-        </thead>
-
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <script>
-      // 不需要項目
-      const excludedFields = [
-        "ChipID",
-        "BinX",
-        "BinY",
-        "TestTemp",
-        "SetTemp",
-        "TestStation",
-        "TestTimeStart",
-        "TestTimeEnd",
-        "IsManualOCR",
-        "IsNonLuminous",
-        "ProbePositionX",
-        "ProbePositionY",
-        "ProbeForce_LD",
-        "ProbeForce_EA",
-        "ProbeForce_SOA",
-        "",
-      ];
-
-      // 預設勾選項目
-      const defaultCheckedFields = [
-        "IthN1",
-        "Iop1N1",
-        "Vop1N1",
-        "PmaxN1",
-        "SEf1N1",
-        "Kink2N1",
-        "centerWLN12",
-        "SMSRN12",
-      ];
-
-      let dataA = { headers: [], rows: [] };
-      let dataB = { headers: [], rows: [] };
-      let fileA = "";
-      let fileB = "";
-
-      //----------------------- 宣告區 ----------------------------//
-
-      function handleFileInput(file, targetData) {
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-          const lines = reader.result.trim().split("\n");
-
-          //從哪一行讀取欄位
-          const headers = lines[1].split(",").map((h) => h.trim());
-
-          const rows = lines
-            .slice(2) // 從哪一行開始讀取資料
-            .map((line) => line.split(",").map((v) => v.trim()));
-
-          targetData.headers = headers;
-          targetData.rows = rows;
-
-          renderFieldList();
-        };
-        reader.readAsText(file);
-      }
-
-      document.getElementById("fileInputA").addEventListener("change", (e) => {
-        handleFileInput(e.target.files[0], dataA);
-        fileA = e.target.files[0].name;
-        document.getElementById("fileNameA").textContent = `檔案 A：${fileA}`;
-
-        //console.log(e.target.files[0], "===========檔案內容");
-        //console.log(e.target.files[0].name, "===========檔案名稱");
+      const stageGroups = {};
+      rows.forEach((r) => {
+        const stage = r[testStationIndex]?.trim();
+        if (!stage) return;
+        if (!stageGroups[stage]) stageGroups[stage] = [];
+        stageGroups[stage].push(r);
       });
 
-      document.getElementById("fileInputB").addEventListener("change", (e) => {
-        fileB = e.target.files[0].name;
-        document.getElementById("fileNameB").textContent = `檔案 B：${fileB}`;
-        handleFileInput(e.target.files[0], dataB);
+      selectedIndexes.forEach((idx) => {
+        const param = headers[idx];
+        result[param] = {};
+        ["Stage1", "Stage2"].forEach((stage) => {
+          const group = stageGroups[stage];
+          if (!group) return;
+          const values = group
+            .map((r) => Number(r[idx]))
+            .filter((v) => Number.isFinite(v));
+          const m = median(values);
+          if (m !== null) result[param][stage] = m;
+        });
       });
 
-      function renderFieldList() {
-        const container = document.getElementById("fieldList");
-        container.innerHTML = "";
+      return result;
+    }
 
-        const headers = dataA.headers.length ? dataA.headers : dataB.headers;
-        if (!headers.length) {
-          container.innerHTML = "請先上傳 CSV";
-          return;
-        }
+    function median(values) {
+      if (!Array.isArray(values) || values.length === 0) return null;
+      const nums = values
+        .filter((v) => Number.isFinite(v))
+        .sort((a, b) => a - b);
+      const mid = Math.floor(nums.length / 2);
+      return nums.length % 2 !== 0
+        ? nums[mid]
+        : (nums[mid - 1] + nums[mid]) / 2;
+    }
 
-        headers.forEach((h, i) => {
-          const fieldName = h.replace(/\r/g, "").trim();
-          if (excludedFields.includes(fieldName)) return;
-          const isChecked = defaultCheckedFields.includes(fieldName);
-          const label = document.createElement("label");
-          label.innerHTML = `<input type="checkbox" value="${i}" ${isChecked ? "checked" : ""}> ${fieldName}`;
-          container.appendChild(label);
-        });
+    function calculateMedian() {
+      const tbody = document.querySelector("#resultTable tbody");
+      tbody.innerHTML = "";
+
+      if (!dataA.headers.length && !dataB.headers.length) {
+        alert("請先上傳至少一個 CSV 檔案");
+        return;
       }
 
-      function analyzeCSV(headers, rows, selectedIndexes) {
-        if (!headers.length || !rows.length) return {};
-        const result = {};
-        const testStationIndex = headers.findIndex(
-          (h) => h.replace(/\r/g, "").trim() === "TestStation",
-        );
-        if (testStationIndex === -1) return result;
+      const selectedIndexes = [
+        ...document.querySelectorAll(".field-list input:checked"),
+      ].map((cb) => Number(cb.value));
 
-        const stageGroups = {};
-        rows.forEach((r) => {
-          const stage = r[testStationIndex]?.trim();
-          if (!stage) return;
-          if (!stageGroups[stage]) stageGroups[stage] = [];
-          stageGroups[stage].push(r);
+      const results = [];
+      if (dataA.headers.length)
+        results.push({
+          label: "A",
+          result: analyzeCSV(dataA.headers, dataA.rows, selectedIndexes),
+        });
+      if (dataB.headers.length)
+        results.push({
+          label: "B",
+          result: analyzeCSV(dataB.headers, dataB.rows, selectedIndexes),
         });
 
-        selectedIndexes.forEach((idx) => {
-          const param = headers[idx];
-          result[param] = {};
-          ["Stage1", "Stage2"].forEach((stage) => {
-            const group = stageGroups[stage];
-            if (!group) return;
-            const values = group
-              .map((r) => Number(r[idx]))
-              .filter((v) => Number.isFinite(v));
-            const m = median(values);
-            if (m !== null) result[param][stage] = m;
-          });
-        });
+      const headersToUse = dataA.headers.length
+        ? dataA.headers
+        : dataB.headers;
 
-        return result;
+      // 生成表格欄位
+      const tableHead = document.querySelector("#resultTable thead tr");
+      tableHead.innerHTML = "<th>Parameter</th>";
+      results.forEach((r) => {
+        tableHead.innerHTML += `<th>${r.label} Stage1</th><th>${r.label} Stage2</th>`;
+      });
+
+      // 同時有 A、B 才顯示差異
+      if (results.length === 2) {
+        tableHead.innerHTML += `<th>Stage1 Δ%</th><th>Stage2 Δ%</th>`;
       }
 
-      function median(values) {
-        if (!Array.isArray(values) || values.length === 0) return null;
-        const nums = values
-          .filter((v) => Number.isFinite(v))
-          .sort((a, b) => a - b);
-        const mid = Math.floor(nums.length / 2);
-        return nums.length % 2 !== 0
-          ? nums[mid]
-          : (nums[mid - 1] + nums[mid]) / 2;
-      }
+      // 填入資料
+      selectedIndexes.forEach((idx) => {
+        const param = headersToUse[idx];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${param}</td>`;
 
-      function calculateMedian() {
-        const tbody = document.querySelector("#resultTable tbody");
-        tbody.innerHTML = "";
-
-        if (!dataA.headers.length && !dataB.headers.length) {
-          alert("請先上傳至少一個 CSV 檔案");
-          return;
-        }
-
-        const selectedIndexes = [
-          ...document.querySelectorAll(".field-list input:checked"),
-        ].map((cb) => Number(cb.value));
-
-        const results = [];
-        if (dataA.headers.length)
-          results.push({
-            label: "A",
-            result: analyzeCSV(dataA.headers, dataA.rows, selectedIndexes),
-          });
-        if (dataB.headers.length)
-          results.push({
-            label: "B",
-            result: analyzeCSV(dataB.headers, dataB.rows, selectedIndexes),
-          });
-
-        const headersToUse = dataA.headers.length
-          ? dataA.headers
-          : dataB.headers;
-
-        // 生成表格欄位
-        const tableHead = document.querySelector("#resultTable thead tr");
-        tableHead.innerHTML = "<th>Parameter</th>";
         results.forEach((r) => {
-          tableHead.innerHTML += `<th>${r.label} Stage1</th><th>${r.label} Stage2</th>`;
+          tr.innerHTML += `<td>${r.result[param]?.Stage1 ?? "—"}</td>
+                     <td>${r.result[param]?.Stage2 ?? "—"}</td>`;
         });
 
-        // 填入資料
-        selectedIndexes.forEach((idx) => {
-          const param = headersToUse[idx];
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${param}</td>`;
-          results.forEach((r) => {
-            tr.innerHTML += `<td>${r.result[param]?.Stage1 ?? "—"}</td><td>${r.result[param]?.Stage2 ?? "—"}</td>`;
-          });
-          tbody.appendChild(tr);
-        });
-      }
-    </script>
-  </body>
+        // A vs B 差異計算（Stage1 & Stage2）
+        if (results.length === 2) {
+          const aS1 = results[0].result[param]?.Stage1;
+          const bS1 = results[1].result[param]?.Stage1;
+          const aS2 = results[0].result[param]?.Stage2;
+          const bS2 = results[1].result[param]?.Stage2;
+
+          const diffS1 =
+            Number.isFinite(aS1) && Number.isFinite(bS1) && aS1 !== 0
+              ? (((bS1 - aS1) / aS1) * 100).toFixed(2) + "%"
+              : "—";
+
+          const diffS2 =
+            Number.isFinite(aS2) && Number.isFinite(bS2) && aS2 !== 0
+              ? (((bS2 - aS2) / aS2) * 100).toFixed(2) + "%"
+              : "—";
+
+          tr.innerHTML += `<td>${diffS1}</td><td>${diffS2}</td>`;
+        }
+
+        tbody.appendChild(tr);
+      });
+
+    }
+  </script>
+</body>
+
 </html>
