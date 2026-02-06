@@ -97,6 +97,17 @@
     #fileInputB {
       margin-top: 10px;
     }
+
+    /* 差異超過門檻警示 */
+    .diff-alert {
+      color: #b00020;
+      font-weight: 600;
+      background: #fff1f1;
+    }
+
+    .diff-alert::before {
+      content: "⚠ ";
+    }
   </style>
 </head>
 
@@ -167,6 +178,12 @@
     let dataB = { headers: [], rows: [] };
     let fileA = "";
     let fileB = "";
+
+    // ================== 差異百分比警戒值設定 ==================
+    // ⚠️ 超過此百分比（正負）即標紅，例如 5 = ±5%
+    const DIFF_ALERT_PERCENT = 5;
+    // ==========================================================
+
 
     //----------------------- 宣告區 ----------------------------//
 
@@ -330,17 +347,36 @@
           const aS2 = results[0].result[param]?.Stage2;
           const bS2 = results[1].result[param]?.Stage2;
 
-          const diffS1 =
-            Number.isFinite(aS1) && Number.isFinite(bS1) && aS1 !== 0
-              ? (((bS1 - aS1) / aS1) * 100).toFixed(2) + "%"
-              : "—";
+          let diffS1Value = null;
+          let diffS1 = "—";
+          let diffS2Value = null;
+          let diffS2 = "—";
 
-          const diffS2 =
-            Number.isFinite(aS2) && Number.isFinite(bS2) && aS2 !== 0
-              ? (((bS2 - aS2) / aS2) * 100).toFixed(2) + "%"
-              : "—";
+          if (Number.isFinite(aS1) && Number.isFinite(bS1) && aS1 !== 0) {
+            diffS1Value = ((bS1 - aS1) / aS1) * 100;           // 百分比+正負
+            //diffS1Value = Math.abs((bS1 - aS1) / aS1) * 100;    // 百分比
+            diffS1 = diffS1Value.toFixed(2) + "%";
+          }
 
-          tr.innerHTML += `<td>${diffS1}</td><td>${diffS2}</td>`;
+          if (Number.isFinite(aS2) && Number.isFinite(bS2) && aS2 !== 0) {
+            diffS2Value = ((bS2 - aS2) / aS2) * 100;            // 百分比+正負
+            // diffS2Value = Math.abs((bS2 - aS2) / aS2) * 100;   // 百分比
+            diffS2 = diffS2Value.toFixed(2) + "%";
+          }
+
+          const diffS1Class =
+            diffS1Value !== null && Math.abs(diffS1Value) > DIFF_ALERT_PERCENT
+              ? "diff-alert"
+              : "";
+
+          const diffS2Class =
+            diffS2Value !== null && Math.abs(diffS2Value) > DIFF_ALERT_PERCENT
+              ? "diff-alert"
+              : "";
+
+          tr.innerHTML += `<td class="${diffS1Class}">${diffS1}</td><td class="${diffS2Class}">${diffS2}</td>`;
+
+
         }
 
         tbody.appendChild(tr);
