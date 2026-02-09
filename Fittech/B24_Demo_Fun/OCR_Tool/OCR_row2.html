@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Chip Grid Viewer</title>
+
+    <style>
+        body {
+            font-family: "Inter", "SF Pro Display", "Noto Sans TC", sans-serif;
+            background: #f2f2f2;
+            padding: 40px;
+            color: #111;
+        }
+
+        h2 {
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+
+        #fileName {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .toggle {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .map-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+
+        .map-grid {
+            display: grid;
+            gap: 6px;
+        }
+
+        .cell {
+            width: 70px;
+            height: 45px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: 0.2s ease;
+        }
+
+        .cell:hover {
+            background: #111;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Chip 三列排列工具2</h2>
+
+    <div class="card">
+        <input type="file" id="fileInput" accept=".csv" />
+        <div id="fileName"></div>
+
+        <label class="toggle">
+            <input type="checkbox" id="sShapeToggle">
+            使用 S 形排列
+        </label>
+    </div>
+
+    <div class="card map-wrapper">
+        <div id="map" class="map-grid"></div>
+    </div>
+
+    <script>
+        let chips = [];
+
+        document.getElementById("fileInput").addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById("fileName").textContent = "檔案名稱：" + file.name;
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                parseCSV(reader.result);
+                generateGrid();
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById("sShapeToggle").addEventListener("change", generateGrid);
+
+        function parseCSV(text) {
+            const lines = text.trim().split("\n");
+            const headers = lines[1].split(",").map(h => h.trim());
+
+            const chipIndex = headers.indexOf("ChipID");
+            const xIndex = headers.indexOf("BinX");
+            const yIndex = headers.indexOf("BinY");
+
+            // console.log(headers,'-----------')
+
+            chips = [];
+
+            lines.slice(2).forEach(line => {
+                const cols = line.split(",");
+
+                const chip = cols[chipIndex];
+                const x = Number(cols[xIndex]);
+                const y = Number(cols[yIndex]);
+
+                if (chip && Number.isFinite(x) && Number.isFinite(y)) {
+                    chips.push({
+                        x: x,
+                        y: y,
+                        chip: chip
+                    });
+                }
+            });
+        }
+
+
+        function generateGrid() {
+            const container = document.getElementById("map");
+            container.innerHTML = "";
+
+            if (!chips.length) return;
+
+            const columns = 3;
+
+            // ⭐ 只排序實際存在的點
+            chips.sort((a, b) => {
+                if (a.x !== b.x) {
+                    return a.x - b.x;   // 先比 X
+                }
+                return a.y - b.y;     // 再比 Y
+            });
+
+            const total = chips.length;
+            const rows = Math.ceil(total / columns);
+
+            container.style.gridTemplateColumns = `repeat(${columns}, 70px)`;
+
+            let grid = Array.from({ length: rows }, () => Array(columns).fill(""));
+
+            chips.forEach((item, index) => {
+                const col = Math.floor(index / rows);
+                const row = index % rows;
+
+                if (col < columns) {
+                    grid[row][col] = item.chip;
+                }
+            });
+
+            grid.forEach(row => {
+                row.forEach(cell => {
+                    const div = document.createElement("div");
+                    div.className = "cell";
+                    div.textContent = cell || "";
+                    container.appendChild(div);
+                });
+            });
+        }
+
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>

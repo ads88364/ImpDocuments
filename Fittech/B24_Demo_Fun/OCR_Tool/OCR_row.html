@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Chip Grid Viewer</title>
+
+    <style>
+        body {
+            font-family: "Inter", "SF Pro Display", "Noto Sans TC", sans-serif;
+            background: #f2f2f2;
+            padding: 40px;
+            color: #111;
+        }
+
+        h2 {
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+
+        #fileName {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .toggle {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .map-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+
+        .map-grid {
+            display: grid;
+            gap: 6px;
+        }
+
+        .cell {
+            width: 70px;
+            height: 45px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: 0.2s ease;
+        }
+
+        .cell:hover {
+            background: #111;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Chip 三列排列工具</h2>
+
+    <div class="card">
+        <input type="file" id="fileInput" accept=".csv" />
+        <div id="fileName"></div>
+
+        <label class="toggle">
+            <input type="checkbox" id="sShapeToggle">
+            使用 S 形排列
+        </label>
+    </div>
+
+    <div class="card map-wrapper">
+        <div id="map" class="map-grid"></div>
+    </div>
+
+    <script>
+        let chips = [];
+
+        document.getElementById("fileInput").addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById("fileName").textContent = "檔案名稱：" + file.name;
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                parseCSV(reader.result);
+                generateGrid();
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById("sShapeToggle").addEventListener("change", generateGrid);
+
+        function parseCSV(text) {
+            const lines = text.trim().split("\n");
+            const headers = lines[1].split(",").map(h => h.trim());
+
+            const chipIndex = headers.indexOf("ChipID");
+            const xIndex = headers.indexOf("BinX");
+            const yIndex = headers.indexOf("BinY");
+
+            chips = {};
+            let xSet = new Set();
+            let ySet = new Set();
+
+            lines.slice(2).forEach(line => {
+                const cols = line.split(",");
+
+                const chip = cols[chipIndex];
+                const x = parseInt(cols[xIndex]);
+                const y = parseInt(cols[yIndex]);
+
+                if (!isNaN(x) && !isNaN(y) && chip) {
+                    const key = `${x}_${y}`;
+
+                    // ⭐ 每個座標只取第一顆
+                    if (!chips[key]) {
+                        chips[key] = chip;
+                    }
+
+                    xSet.add(x);
+                    ySet.add(y);
+                    // console.log(key, '8888888888')
+                }
+
+            });
+            
+            chips.xList = Array.from(xSet).sort((a, b) => a - b);
+            chips.yList = Array.from(ySet).sort((a, b) => a - b);
+
+        }
+
+
+        function generateGrid() {
+            const container = document.getElementById("map");
+            container.innerHTML = "";
+
+            if (!chips.xList) return;
+
+            const useSShape = document.getElementById("sShapeToggle").checked;
+
+            const xList = chips.xList;
+            const yList = chips.yList;
+
+            // console.log(xList, '========')
+
+            container.style.gridTemplateColumns = `repeat(${xList.length}, 70px)`;
+
+            yList.forEach((y, rowIndex) => {
+
+                let currentXList = [...xList];
+
+                // ⭐ S形 → 第二列反轉
+                if (useSShape && rowIndex % 2 === 1) {
+                    currentXList.reverse();
+                }
+
+                currentXList.forEach(x => {
+                    const key = `${x}_${y}`;
+                    const chip = chips[key] || "";
+
+                    const cell = document.createElement("div");
+                    cell.className = "cell";
+                    cell.textContent = chip;
+
+                    container.appendChild(cell);
+                });
+
+            });
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>
