@@ -1,191 +1,199 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>36進位產生器</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <title>36進位產生器</title>
-
-  <style>
-    body {
-      font-family: "Inter", "Segoe UI", sans-serif;
-      background: #f4f4f4;
-      padding: 40px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .container {
-      width: 520px;
-      background: #fff;
-      padding: 24px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      font-size: 18px;
-    }
-
-    label {
-      font-size: 13px;
-      color: #555;
-      margin-top: 12px;
-      display: block;
-    }
-
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    button {
-      margin-top: 16px;
-      padding: 10px;
-      width: 100%;
-      border: none;
-      background: #222;
-      color: #fff;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #000;
-    }
-
-    textarea {
-      width: 100%;
-      height: 220px;
-      margin-top: 16px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 12px;
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="container">
-    <h2>36進位產生器(數量39 間隔3)</h2>
-
-    <label>前兩碼起始</label>
-    <input id="prefixStart" maxlength="2" placeholder="00">
-
-    <label>前兩碼結束</label>
-    <input id="prefixEnd" maxlength="2" placeholder="02">
-
-    <label>產生幾個區段</label>
-    <input id="blockCount" type="number" placeholder="例如：8">
-
-    <button onclick="generate()">產生</button>
-    <button onclick="downloadCSV()">下載 CSV</button>
-
-    <textarea id="output" placeholder="結果顯示在這裡"></textarea>
-  </div>
-
-  <script>
-    let csvData = "";
-
-    // ⭐ 固定規則（可自行改）
-    const BLOCK_SIZE = 39; // 每列數量
-    const GAP = 3;         // 區段間隔
-
-
-    function generate() {
-      const prefixStart = document.getElementById("prefixStart").value.toUpperCase();
-      const prefixEnd = document.getElementById("prefixEnd").value.toUpperCase();
-      const blockCount = parseInt(document.getElementById("blockCount").value);
-      const output = document.getElementById("output");
-
-      if (!/^[0-9A-Z]{2}$/.test(prefixStart) || !/^[0-9A-Z]{2}$/.test(prefixEnd)) {
-        alert("前兩碼請輸入2碼36進位");
-        return;
+    <style>
+      body {
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background: #f4f4f4;
+        padding: 40px;
+        display: flex;
+        justify-content: center;
       }
 
-      if (isNaN(blockCount) || blockCount <= 0) {
-        alert("請輸入正確區段數量");
-        return;
+      .container {
+        width: 520px;
+        background: #fff;
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid #ddd;
       }
 
-      let startPrefix = parseInt(prefixStart, 36);
-      let endPrefix = parseInt(prefixEnd, 36);
-
-      if (startPrefix > endPrefix) {
-        alert("起始前兩碼不能大於結束");
-        return;
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 18px;
       }
 
-      let resultLines = [];
-
-      // ⭐ 表頭
-      let header = [];
-      for (let i = 1; i <= BLOCK_SIZE; i++) {
-        header.push(i);
+      label {
+        font-size: 13px;
+        color: #555;
+        margin-top: 12px;
+        display: block;
       }
-      resultLines.push(header.join(","));
 
-      // ⭐ 外層：prefix loop
-      for (let p = startPrefix; p <= endPrefix; p++) {
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 6px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
 
-        let prefixHex = p.toString(36).toUpperCase().padStart(2, "0");
+      button {
+        margin-top: 16px;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        background: #222;
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+      }
 
-        // ⭐ 每個 prefix 從 xx00 開始
-        let startValue = parseInt(prefixHex + "00", 36);
+      button:hover {
+        background: #000;
+      }
 
-        // ⭐ 內層：區段
-        for (let g = 0; g < blockCount; g++) {
+      textarea {
+        width: 100%;
+        height: 220px;
+        margin-top: 16px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
 
-          let row = [];
+  <body>
+    <div class="container">
+      <h2>36進位產生器(數量39 間隔3)</h2>
 
-          for (let i = 0; i < BLOCK_SIZE; i++) {
-            let value = startValue + i;
-            let hex = value.toString(36).toUpperCase().padStart(4, "0");
-            row.push(hex);
-          }
+      <label>前兩碼起始</label>
+      <input id="prefixStart" maxlength="2" placeholder="00" />
 
-          resultLines.push(row.join(","));
+      <label>前兩碼結束</label>
+      <input id="prefixEnd" maxlength="2" placeholder="02" />
 
-          startValue += BLOCK_SIZE + GAP;
+      <label>產生幾個區段</label>
+      <input id="blockCount" type="number" placeholder="例如：8" />
+
+      <button onclick="generate()">產生</button>
+      <button onclick="downloadCSV()">下載 CSV</button>
+
+      <textarea id="output" placeholder="結果顯示在這裡"></textarea>
+    </div>
+
+    <script>
+      let csvData = "";
+
+      // ⭐ 固定規則（可自行改）
+      const BLOCK_SIZE = 39; // 每列數量
+      const GAP = 3; // 區段間隔
+
+      function generate() {
+        const prefixStart = document
+          .getElementById("prefixStart")
+          .value.toUpperCase();
+        const prefixEnd = document
+          .getElementById("prefixEnd")
+          .value.toUpperCase();
+        const blockCount = parseInt(
+          document.getElementById("blockCount").value,
+        );
+        const output = document.getElementById("output");
+
+        if (
+          !/^[0-9A-Z]{2}$/.test(prefixStart) ||
+          !/^[0-9A-Z]{2}$/.test(prefixEnd)
+        ) {
+          alert("前兩碼請輸入2碼36進位");
+          return;
         }
 
-        // ⭐ 每個 prefix 區塊空一行（可刪）
-        resultLines.push("");
+        if (isNaN(blockCount) || blockCount <= 0) {
+          alert("請輸入正確區段數量");
+          return;
+        }
+
+        let startPrefix = parseInt(prefixStart, 36);
+        let endPrefix = parseInt(prefixEnd, 36);
+
+        if (startPrefix > endPrefix) {
+          alert("起始前兩碼不能大於結束");
+          return;
+        }
+
+        let resultLines = [];
+
+        // ⭐ 表頭
+        let header = [];
+        for (let i = 1; i <= BLOCK_SIZE; i++) {
+          header.push(i);
+        }
+        resultLines.push(header.join(","));
+
+        // ⭐ 外層：prefix loop
+        for (let p = startPrefix; p <= endPrefix; p++) {
+          let prefixHex = p.toString(36).toUpperCase().padStart(2, "0");
+
+          // ⭐ 每個 prefix 從 xx00 開始
+          let startValue = parseInt(prefixHex + "00", 36);
+
+          // ⭐ 內層：區段
+          for (let g = 0; g < blockCount; g++) {
+            let ascRow = [];
+            let descRow = [];
+
+            for (let i = 0; i < BLOCK_SIZE; i++) {
+              let value = startValue + i;
+              let hex = value.toString(36).toUpperCase().padStart(4, "0");
+              ascRow.push(hex);
+            }
+
+            // ⭐ 升冪
+            resultLines.push(ascRow.join(","));
+
+            // ⭐ 降冪（直接反轉）
+            descRow = [...ascRow].reverse();
+            resultLines.push(descRow.join(","));
+
+            // ⭐ 下一區段
+            startValue += BLOCK_SIZE + GAP;
+          }
+
+          // ⭐ 每個 prefix 區塊空一行（可刪）
+          resultLines.push("");
+        }
+
+        csvData = resultLines
+          .filter((line) => line && line.trim() !== "")
+          .join("\n");
+        output.value = resultLines.join("\n");
       }
 
-      csvData = resultLines
-        .filter(line => line && line.trim() !== "")
-        .join("\n");
-      output.value = resultLines.join("\n");
-    }
+      // ⭐ 下載 CSV
+      function downloadCSV() {
+        if (!csvData) {
+          alert("請先產生資料");
+          return;
+        }
 
+        const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
 
-    // ⭐ 下載 CSV
-    function downloadCSV() {
-      if (!csvData) {
-        alert("請先產生資料");
-        return;
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "36進位_OCR底圖.csv";
+        link.click();
+
+        URL.revokeObjectURL(url);
       }
-
-      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "36進位_OCR底圖.csv";
-      link.click();
-
-      URL.revokeObjectURL(url);
-    }
-  </script>
-
-</body>
-
+    </script>
+  </body>
 </html>
