@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <title>36進位產生器</title>
+    <title>16進位產生器</title>
 
     <style>
       body {
@@ -72,7 +72,7 @@
 
   <body>
     <div class="container">
-      <h2>36進位產生器(數量39 間隔3 組數8)</h2>
+      <h2>16進位產生器(數量32 間隔2 組數5)</h2>
 
       <label>前兩碼起始</label>
       <input id="prefixStart" maxlength="2" placeholder="00" />
@@ -81,7 +81,7 @@
       <input id="prefixEnd" maxlength="2" placeholder="02" />
 
       <label>產生幾個區段</label>
-      <input id="blockCount" type="number" placeholder="例如：8" />
+      <input id="blockCount" type="number" placeholder="例如：5" />
 
       <button onclick="generate()">產生</button>
       <button onclick="downloadCSV()">下載 CSV</button>
@@ -93,8 +93,8 @@
       let csvData = "";
 
       // ⭐ 固定規則（可自行改）
-      const BLOCK_SIZE = 39; // 每列數量
-      const GAP = 3; // 區段間隔
+      const BLOCK_SIZE = 32; // 每列數量
+      const GAP = 2; // 區段間隔
 
       function generate() {
         const prefixStart = document
@@ -109,10 +109,10 @@
         const output = document.getElementById("output");
 
         if (
-          !/^[0-9A-Z]{2}$/.test(prefixStart) ||
-          !/^[0-9A-Z]{2}$/.test(prefixEnd)
+          !/^[0-9A-F]{2}$/.test(prefixStart) ||
+          !/^[0-9A-F]{2}$/.test(prefixEnd)
         ) {
-          alert("前兩碼請輸入2碼36進位");
+          alert("前兩碼請輸入2碼16進位");
           return;
         }
 
@@ -121,8 +121,8 @@
           return;
         }
 
-        let startPrefix = parseInt(prefixStart, 36);
-        let endPrefix = parseInt(prefixEnd, 36);
+        let startPrefix = parseInt(prefixStart, 16);
+        let endPrefix = parseInt(prefixEnd, 16);
 
         if (startPrefix > endPrefix) {
           alert("起始前兩碼不能大於結束");
@@ -140,10 +140,10 @@
 
         // ⭐ 外層：prefix loop
         for (let p = startPrefix; p <= endPrefix; p++) {
-          let prefixHex = p.toString(36).toUpperCase().padStart(2, "0");
+          let prefixHex = p.toString(16).toUpperCase().padStart(2, "0");
 
           // ⭐ 每個 prefix 從 xx00 開始
-          let startValue = parseInt(prefixHex + "00", 36);
+          let startValue = parseInt(prefixHex + "00", 16);
 
           // ⭐ 內層：區段
           for (let g = 0; g < blockCount; g++) {
@@ -152,7 +152,7 @@
 
             for (let i = 0; i < BLOCK_SIZE; i++) {
               let value = startValue + i;
-              let hex = value.toString(36).toUpperCase().padStart(4, "0");
+              let hex = value.toString(16).toUpperCase().padStart(4, "0");
               ascRow.push(hex);
             }
 
@@ -189,7 +189,7 @@
 
         const link = document.createElement("a");
         link.href = url;
-        link.download = "36進位_OCR底圖.csv";
+        link.download = "483QT_BarOCRMap.csv";
         link.click();
 
         URL.revokeObjectURL(url);
