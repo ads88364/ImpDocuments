@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>進位區段產生器</title>
+
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+      background: #f4f4f4;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 560px;
+      background: #fff;
+      padding: 28px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    h4 {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 12px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    label {
+      font-size: 13px;
+      color: #555;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 16px;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      background: #222;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    textarea {
+      width: 100%;
+      height: 240px;
+      margin-top: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h2>進位區段產生器</h2>
+    <h4>283QT 16進位 數量32 間隔2 組數5</h4>
+    <h4>283QL 16進位 數量39 間隔3 組數5</h4>
+    <h4>483QL 36進位 數量39 間隔3 組數8</h4>
+
+    <div class="form-row">
+      <label>進位</label>
+      <select id="baseSelect">
+        <option value="16">16進位</option>
+        <option value="36" selected>36進位</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>前兩碼起始</label>
+      <input id="prefixStart">
+    </div>
+
+    <div class="form-row">
+      <label>前兩碼結束</label>
+      <input id="prefixEnd">
+    </div>
+
+    <div class="form-row">
+      <label>每列數量</label>
+      <input id="blockSize" type="number">
+    </div>
+
+    <div class="form-row">
+      <label>區段數量</label>
+      <select id="blockCountSelect"></select>
+    </div>
+
+    <div class="form-row">
+      <label>間隔 gap</label>
+      <select id="gapSelect"></select>
+    </div>
+
+    <button onclick="generate()">產生</button>
+    <button onclick="downloadCSV()">下載 CSV</button>
+
+    <textarea id="output"></textarea>
+
+  </div>
+
+  <script>
+
+    // ===== 可調參數 =====
+    const GAP_OPTIONS = [2, 3];
+    const BLOCK_COUNT_OPTIONS = [5, 8];
+
+    // 初始化
+    function initDropdowns() {
+      const gapSelect = document.getElementById("gapSelect");
+      const blockSelect = document.getElementById("blockCountSelect");
+
+      GAP_OPTIONS.forEach(v => {
+        gapSelect.add(new Option(v, v));
+      });
+
+      BLOCK_COUNT_OPTIONS.forEach(v => {
+        blockSelect.add(new Option(v, v));
+      });
+    }
+    initDropdowns();
+
+    // ===== 進位轉換 =====
+    const BASE_MAP = {
+      16: "0123456789ABCDEF",
+      36: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    };
+
+    function toBase(val, base, len) {
+      const chars = BASE_MAP[base];
+      let r = "";
+      while (val > 0) {
+        r = chars[val % base] + r;
+        val = Math.floor(val / base);
+      }
+      return r.padStart(len, "0");
+    }
+
+    function fromBase(str, base) {
+      const chars = BASE_MAP[base];
+      let r = 0;
+      for (let c of str) {
+        r = r * base + chars.indexOf(c);
+      }
+      return r;
+    }
+
+    // ===== 主功能 =====
+    let csvData = "";
+
+    function generate() {
+
+      const base = parseInt(document.getElementById("baseSelect").value);
+      const ps = document.getElementById("prefixStart").value.toUpperCase();
+      const pe = document.getElementById("prefixEnd").value.toUpperCase();
+      const blockSize = parseInt(document.getElementById("blockSize").value);
+      const blockCount = parseInt(document.getElementById("blockCountSelect").value);
+      const gap = parseInt(document.getElementById("gapSelect").value);
+
+      if (!ps || !pe || !blockSize) {
+        alert("請輸入完整參數");
+        return;
+      }
+
+      let startP = fromBase(ps, base);
+      let endP = fromBase(pe, base);
+
+      let lines = [];
+
+      ["ASC", "DESC"].forEach(mode => {
+
+        lines.push(`[${mode}]`);
+
+        lines.push(Array.from({ length: blockSize }, (_, i) => i + 1).join(","));
+
+        for (let p = startP; p <= endP; p++) {
+
+          let prefix = toBase(p, base, 2);
+          let startValue = fromBase(prefix + "00", base);
+
+          for (let g = 0; g < blockCount; g++) {
+
+            let row = [];
+
+            for (let i = 0; i < blockSize; i++) {
+              row.push(toBase(startValue + i, base, 4));
+            }
+
+            if (mode === "DESC") row.reverse();
+
+            lines.push(row.join(","));
+            startValue += blockSize + gap;
+          }
+        }
+      });
+
+      csvData = lines.join("\n");
+
+      document.getElementById("output").value = csvData;
+    }
+
+    // ===== 下載 =====
+    function downloadCSV() {
+      if (!csvData) {
+        alert("請先產生資料");
+        return;
+      }
+
+      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "result.csv";
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+  </script>
+
+</body>
+
+</html>
