@@ -28,10 +28,17 @@
       font-size: 22px;
     }
 
-    h4 {
+    .preset-header {
       text-align: center;
       margin-bottom: 10px;
       font-size: 16px;
+      cursor: pointer;
+      color: #007bff;
+      text-decoration: underline;
+    }
+
+    .preset-header:hover {
+      color: #0056b3;
     }
 
     .form-row {
@@ -82,9 +89,10 @@
   <div class="container">
 
     <h2>進位區段產生器</h2>
-    <h4>283QT 16進位 數量32 間隔2 組數5</h4>
-    <h4>283QL 16進位 數量39 間隔3 組數5</h4>
-    <h4>483QL 36進位 數量39 間隔3 組數8</h4>
+    <h4 class="preset-header" onclick="applyPreset(16, 32, 2, 5)">283QT 16進位 數量32 間隔2 組數5</h4>
+    <h4 class="preset-header" onclick="applyPreset(16, 39, 3, 5)">283QL 16進位 數量39 間隔3 組數5</h4>
+    <h4 class="preset-header" onclick="applyPreset(16, 32, 2, 7)">483QT 16進位 數量32 間隔2 組數7</h4>
+    <h4 class="preset-header" onclick="applyPreset(36, 39, 3, 8)">483QL 36進位 數量39 間隔3 組數8</h4>
 
     <div class="form-row">
       <label>進位</label>
@@ -96,12 +104,12 @@
 
     <div class="form-row">
       <label>前兩碼起始</label>
-      <input id="prefixStart">
+      <input id="prefixStart" placeholder="例如: 1E">
     </div>
 
     <div class="form-row">
       <label>前兩碼結束</label>
-      <input id="prefixEnd">
+      <input id="prefixEnd" placeholder="例如: 2H">
     </div>
 
     <div class="form-row">
@@ -110,7 +118,7 @@
     </div>
 
     <div class="form-row">
-      <label>區段數量</label>
+      <label>區段數量 (組數)</label>
       <select id="blockCountSelect"></select>
     </div>
 
@@ -127,35 +135,43 @@
   </div>
 
   <script>
-
-    // ===== 可調參數 =====
+    // 定義下拉選單的可選數值
     const GAP_OPTIONS = [2, 3];
     const BLOCK_COUNT_OPTIONS = [5, 7, 8];
 
-    // 初始化
+    // 初始化選單內容
     function initDropdowns() {
       const gapSelect = document.getElementById("gapSelect");
       const blockSelect = document.getElementById("blockCountSelect");
-
-      GAP_OPTIONS.forEach(v => {
-        gapSelect.add(new Option(v, v));
-      });
-
-      BLOCK_COUNT_OPTIONS.forEach(v => {
-        blockSelect.add(new Option(v, v));
-      });
+      GAP_OPTIONS.forEach(v => gapSelect.add(new Option(v, v)));
+      BLOCK_COUNT_OPTIONS.forEach(v => blockSelect.add(new Option(v, v)));
     }
     initDropdowns();
 
-    // ===== 進位轉換 =====
+    // 套用快速設定按鈕的參數
+    function applyPreset(base, size, gap, count) {
+      document.getElementById("baseSelect").value = base;
+      document.getElementById("blockSize").value = size;
+      document.getElementById("gapSelect").value = gap;
+      document.getElementById("blockCountSelect").value = count;
+    }
+
+    // 進位字符對應表
     const BASE_MAP = {
       16: "0123456789ABCDEF",
       36: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     };
 
+    /**
+     * 十進位轉特定進位字串
+     * @param {number} val - 數值
+     * @param {number} base - 進位制 (16或36)
+     * @param {number} len - 補足位數
+     */
     function toBase(val, base, len) {
       const chars = BASE_MAP[base];
       let r = "";
+      if (val === 0) r = chars[0];
       while (val > 0) {
         r = chars[val % base] + r;
         val = Math.floor(val / base);
@@ -163,6 +179,11 @@
       return r.padStart(len, "0");
     }
 
+    /**
+     * 特定進位字串轉十進位
+     * @param {string} str - 進位字串
+     * @param {number} base - 進位制 (16或36)
+     */
     function fromBase(str, base) {
       const chars = BASE_MAP[base];
       let r = 0;
@@ -172,11 +193,23 @@
       return r;
     }
 
-    // ===== 主功能 =====
+    /**
+     * 核心邏輯：自動判斷升降冪
+     * 規則：前兩碼之第二位字元在進位序列中為「偶數索引」則升冪，反之為降冪
+     * 範例：'0' 是索引 0 (升), '1' 是索引 1 (降), 'A' 是索引 10 (升)
+     */
+    function getSequenceMode(prefix) {
+      const secondChar = prefix.substring(1, 2);
+      const allChars = BASE_MAP[36]; // 使用最完整的36進位表對應索引
+      const index = allChars.indexOf(secondChar);
+      // 偶數索引(0, 2, 4...) -> ASC (升冪), 奇數索引(1, 3, 5...) -> DESC (降冪)
+      return (index % 2 === 0) ? "ASC" : "DESC";
+    }
+
     let csvData = "";
 
     function generate() {
-
+      // 取得使用者輸入的所有參數
       const base = parseInt(document.getElementById("baseSelect").value);
       const ps = document.getElementById("prefixStart").value.toUpperCase();
       const pe = document.getElementById("prefixEnd").value.toUpperCase();
@@ -184,68 +217,74 @@
       const blockCount = parseInt(document.getElementById("blockCountSelect").value);
       const gap = parseInt(document.getElementById("gapSelect").value);
 
+      // 防呆判斷
       if (!ps || !pe || !blockSize) {
         alert("請輸入完整參數");
         return;
       }
 
+      // 將起點與終點轉換為數值進行迴圈
       let startP = fromBase(ps, base);
       let endP = fromBase(pe, base);
-
       let lines = [];
 
-      ["ASC", "DESC"].forEach(mode => {
+      // 產生 CSV 第一列的表頭 (1, 2, 3... 數量編號)
+      let header = [];
+      for (let i = 1; i <= blockSize; i++) header.push(i);
+      lines.push(header.join(","));
 
-        lines.push(`[${mode}]`);
+      // 外迴圈：遍歷前兩碼 (從起始 prefix 到結束 prefix)
+      for (let p = startP; p <= endP; p++) {
+        let prefix = toBase(p, base, 2); // 當前的前兩碼
+        let mode = getSequenceMode(prefix); // 判斷本前綴應為升冪或降冪
+        
+        // 設定起始值 (Prefix + "00")，並以此為基礎加上後續偏移量
+        let startValue = fromBase(prefix + "00", base);
 
-        lines.push(Array.from({ length: blockSize }, (_, i) => i + 1).join(","));
-
-        for (let p = startP; p <= endP; p++) {
-
-          let prefix = toBase(p, base, 2);
-          let startValue = fromBase(prefix + "00", base);
-
-          for (let g = 0; g < blockCount; g++) {
-
-            let row = [];
-
-            for (let i = 0; i < blockSize; i++) {
-              row.push(toBase(startValue + i, base, 4));
-            }
-
-            if (mode === "DESC") row.reverse();
-
-            lines.push(row.join(","));
-            startValue += blockSize + gap;
+        // 中迴圈：產生指定數量的區段 (組數)
+        for (let g = 0; g < blockCount; g++) {
+          let chipIDs = [];
+          
+          // 內迴圈：產生一列中的每個 ID
+          for (let i = 0; i < blockSize; i++) {
+            chipIDs.push(toBase(startValue + i, base, 4));
           }
+
+          // 如果判斷為降冪模式，則將這一列的 ID 反轉排列
+          if (mode === "DESC") chipIDs.reverse();
+
+          // 將結果轉成 CSV 格式存入陣列
+          lines.push(chipIDs.join(","));
+          
+          // 每一組產生完後，累加起始值 (每列數量 + 間隔)，作為下一組的開頭
+          startValue += blockSize + gap;
         }
-      });
+      }
 
+      // 將所有列合併成字串顯示在螢幕上
       csvData = lines.join("\n");
-
       document.getElementById("output").value = csvData;
     }
 
-    // ===== 下載 =====
+    /**
+     * 下載 CSV 檔案，並處理 UTF-8 BOM 以確保 Excel 開啟時不亂碼
+     */
     function downloadCSV() {
       if (!csvData) {
         alert("請先產生資料");
         return;
       }
-
-      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+      // 加入 BOM (\xEF\xBB\xBF) 以利中文編碼
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvData], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement("a");
       a.href = url;
-      a.download = "result.csv";
+      a.download = `ChipID_Result.csv`;
       document.body.appendChild(a);
       a.click();
-
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
-
   </script>
 
 </body>
