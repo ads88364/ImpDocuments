@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ChipData ID 集合比對工具 (少數判定版)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            background: #ffffff;
+            margin-bottom: 25px;
+            transition: 0.3s;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--accent);
+            background: #eff6ff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+            color: #475569;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        /* 標籤樣式 */
+        .id-tag {
+            background: #eee;
+            color: #333;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-right: 6px;
+            display: inline-block;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        /* 只有「少數派」會變紅 */
+        .id-tag.mismatch {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+        }
+
+        .summary-card {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="tool-container">
+        <div style="text-align:center; margin-bottom: 20px;">
+            <h2 style="color: var(--primary); margin: 0;">ChipData ID 集合比對工具</h2>
+            <p style="color: #64748b;">標記說明：僅標示「出現頻率較低」的異常 ID(二版)</p>
+        </div>
+
+        <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+            <strong>點擊或拖入多個 EOM 資料夾</strong>
+            <input type="file" id="fileInput" webkitdirectory directory multiple style="display:none">
+        </div>
+
+        <div id="resultArea"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const resultArea = document.getElementById('resultArea');
+
+        document.getElementById('dropZone').addEventListener('dragover', (e) => e.preventDefault());
+        document.getElementById('dropZone').addEventListener('drop', (e) => {
+            e.preventDefault();
+            processFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => processFiles(e.target.files));
+
+        function processFiles(files) {
+            const fileList = Array.from(files);
+            const groupMap = {};
+            const processedPaths = new Set();
+
+            fileList.forEach(file => {
+                const path = file.webkitRelativePath;
+                const segments = path.split('/');
+                const chipIdx = segments.indexOf('ChipData');
+
+                if (chipIdx !== -1 && segments.length > chipIdx + 1) {
+                    const subFolder = segments[chipIdx + 1];
+                    const parent = segments[chipIdx - 1];
+                    const key = parent + "||" + subFolder;
+
+                    if (!processedPaths.has(key)) {
+                        processedPaths.add(key);
+                        const id = subFolder.split('_')[3];
+                        if (id) {
+                            if (!groupMap[parent]) groupMap[parent] = new Set();
+                            groupMap[parent].add(id);
+                        }
+                    }
+                }
+            });
+            renderResults(groupMap);
+        }
+
+        function renderResults(groupMap) {
+            const parents = Object.keys(groupMap).sort();
+            const totalGroups = parents.length;
+            if (totalGroups === 0) return;
+
+            // 1. 統計頻率
+            const idCounts = {};
+            parents.forEach(p => {
+                groupMap[p].forEach(id => {
+                    idCounts[id] = (idCounts[id] || 0) + 1;
+                });
+            });
+
+            // 2. 檢查整體狀態 (是否全部 ID 都出現在所有資料夾)
+            const allIdentical = Object.values(idCounts).every(count => count === totalGroups);
+
+            let html = `<div class="summary-card ${allIdentical ? 'ok' : 'fail'}">
+            狀態：${allIdentical ? '✅ 所有組別 ID 完全一致' : '❌ 偵測到異樣 ID (紅色為少數出現)'}
+        </div>
+        <table>
+            <thead><tr><th width="40%">資料夾名稱</th><th width="60%">ID 清單</th></tr></thead>
+            <tbody>`;
+
+            parents.forEach(p => {
+                const currentIds = Array.from(groupMap[p]).sort();
+                html += `<tr><td>${p}</td><td>`;
+
+                currentIds.forEach(id => {
+                    const count = idCounts[id];
+
+                    // --- 核心判定邏輯修正 ---
+                    let isMismatch = false;
+
+                    if (totalGroups === 2) {
+                        // 如果只有兩筆，只要不是兩邊都有 (count < 2)，就變紅
+                        isMismatch = count < 2;
+                    } else {
+                        // 如果多筆資料，只有出現次數「小於或等於總數一半」才視為異常
+                        // 例如 5 筆資料，出現 1, 2 次的 ID 會變紅；出現 3, 4, 5 次的 ID 視為正常
+                        isMismatch = count <= (totalGroups / 2);
+                    }
+
+                    html += `<span class="id-tag ${isMismatch ? 'mismatch' : ''}">${id}</span>`;
+                });
+                html += `</td></tr>`;
+            });
+
+            html += `</tbody></table>`;
+            resultArea.innerHTML = html;
+        }
+    </script>
+
+</body>
+
+</html>

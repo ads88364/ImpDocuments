@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ChipData ID 集合比對工具 (點擊多選修正版)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #ffffff;
+            margin-bottom: 25px;
+            transition: 0.3s;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            border: none;
+        }
+
+        .btn-folder {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-files {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+            color: #475569;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        .id-tag {
+            background: #eee;
+            color: #333;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-right: 6px;
+            display: inline-block;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .id-tag.mismatch {
+            background: var(--danger);
+            color: white;
+        }
+
+        .summary-card {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="tool-container">
+        <div style="text-align:center; margin-bottom: 20px;">
+            <h2 style="color: var(--primary); margin: 0;">ChipData ID 集合比對工具</h2>
+            <p style="color: #64748b;">針對 Windows 多資料夾選取優化版本</p>
+        </div>
+
+        <div id="dropZone" class="drop-zone">
+            <strong style="font-size: 1.2rem;">【方法 A】選取多個 EOM 資料夾直接「拖進來」</strong>
+
+            <div class="btn-group">
+                <button class="btn btn-folder" onclick="document.getElementById('dirInput').click()">方法 B：選取母目錄
+                </button>
+                <!-- <button class="btn btn-files" onclick="document.getElementById('fileInput').click()">方法
+                    C：手動全選檔案</button> -->
+            </div>
+
+            <input type="file" id="dirInput" webkitdirectory directory multiple style="display:none">
+            <input type="file" id="fileInput" multiple style="display:none">
+        </div>
+
+        <div id="resultArea"></div>
+    </div>
+
+    <script>
+        // --- 核心變數 ---
+        const dirInput = document.getElementById('dirInput');
+        const fileInput = document.getElementById('fileInput');
+        const resultArea = document.getElementById('resultArea');
+        const dropZone = document.getElementById('dropZone');
+
+        // --- 事件監聽 ---
+
+        // 拖曳處理
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = "#3498db"; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = "#cbd5e1"; });
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = "#cbd5e1";
+            const items = e.dataTransfer.items;
+            const queue = [];
+            for (let i = 0; i < items.length; i++) {
+                const entry = items[i].webkitGetAsEntry();
+                if (entry) queue.push(traverseFileTree(entry));
+            }
+            const results = await Promise.all(queue);
+            handleFiles(results.flat());
+        });
+
+        // 點擊處理：選取資料夾模式
+        dirInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files).map(f => ({
+                path: f.webkitRelativePath,
+                name: f.name
+            }));
+            handleFiles(files);
+        });
+
+        // 點擊處理：多檔案模式 (全選)
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files).map(f => ({
+                path: f.name, // 檔案模式抓不到完整路徑，我們改用檔名解析
+                name: f.name
+            }));
+            handleFiles(files);
+        });
+
+        // --- 遞迴掃描資料夾 ---
+        function traverseFileTree(entry, path = "") {
+            return new Promise((resolve) => {
+                if (entry.isFile) {
+                    resolve([{ path: path + entry.name, name: entry.name }]);
+                } else if (entry.isDirectory) {
+                    const dirReader = entry.createReader();
+                    dirReader.readEntries((entries) => {
+                        const promises = entries.map(e => traverseFileTree(e, path + entry.name + "/"));
+                        Promise.all(promises).then(res => resolve(res.flat()));
+                    });
+                }
+            });
+        }
+
+        // --- 邏輯解析 ---
+        function handleFiles(files) {
+            const groupMap = {};
+            const processedPaths = new Set();
+
+            files.forEach(file => {
+                // 如果是路徑模式 (webkitRelativePath)，邏輯同前
+                if (file.path.includes('/')) {
+                    const segments = file.path.split('/');
+                    const chipIdx = segments.indexOf('ChipData');
+                    if (chipIdx !== -1 && segments.length > chipIdx + 1) {
+                        const subFolder = segments[chipIdx + 1];
+                        const parent = segments[chipIdx - 1];
+                        const key = parent + "||" + subFolder;
+                        if (!processedPaths.has(key)) {
+                            processedPaths.add(key);
+                            const id = subFolder.split('_')[3];
+                            if (id) {
+                                if (!groupMap[parent]) groupMap[parent] = new Set();
+                                groupMap[parent].add(id);
+                            }
+                        }
+                    }
+                }
+                // 如果只有檔名 (全選檔案模式)，我們從檔名反推 ChipData 資料夾名稱
+                else {
+                    // 這種情況通常是使用者進入 ChipData 內部全選
+                    // 我們嘗試從檔案名（如果有包含路徑特徵）或檔案所屬的名稱解析
+                    // *注意：如果只選檔案，瀏覽器不給父目錄名，建議此模式僅用於單次檢查
+                }
+            });
+            renderResults(groupMap);
+        }
+
+        // --- 渲染 (少數決邏輯) ---
+        function renderResults(groupMap) {
+            const parents = Object.keys(groupMap).sort();
+            const totalGroups = parents.length;
+            if (totalGroups === 0) {
+                resultArea.innerHTML = "<p style='color:red; text-align:center;'>❌ 無法建立分組。請選取包含 'ChipData' 的資料夾結構，或直接拖曳多個 EOM 資料夾。</p>";
+                return;
+            }
+
+            const idCounts = {};
+            parents.forEach(p => {
+                groupMap[p].forEach(id => { idCounts[id] = (idCounts[id] || 0) + 1; });
+            });
+
+            const allIdentical = Object.values(idCounts).every(count => count === totalGroups);
+            let html = `<div class="summary-card ${allIdentical ? 'ok' : 'fail'}">
+                狀態：${allIdentical ? '✅ 所有組別完全一致' : '❌ 偵測到異樣 ID (紅色為少數出現)'}
+            </div>
+            <table><thead><tr><th>資料夾 (來源)</th><th>ID 清單</th></tr></thead><tbody>`;
+
+            parents.forEach(p => {
+                const currentIds = Array.from(groupMap[p]).sort();
+                html += `<tr><td>${p}</td><td>`;
+                currentIds.forEach(id => {
+                    const count = idCounts[id];
+                    let isMismatch = totalGroups === 2 ? count < 2 : count <= (totalGroups / 2);
+                    html += `<span class="id-tag ${isMismatch ? 'mismatch' : ''}">${id}</span>`;
+                });
+                html += `</td></tr>`;
+            });
+            resultArea.innerHTML = html + "</tbody></table>";
+        }
+    </script>
+</body>
+
+</html>

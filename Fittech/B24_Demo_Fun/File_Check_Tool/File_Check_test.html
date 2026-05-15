@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ChipData 集合比對工具</title>
+    <style>
+        /* 延續簡潔的專業風格 */
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            background: #ffffff;
+            margin-bottom: 25px;
+            transition: 0.3s;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--accent);
+            background: #eff6ff;
+        }
+
+        /* 結果顯示區域樣式 */
+        .summary-card {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .ok-card {
+            background-color: #dcfce7;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .fail-card {
+            background-color: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-family: monospace;
+        }
+
+        .id-tag {
+            background: #eee;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+
+        .diff-list {
+            color: var(--danger);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="tool-container">
+        <div style="text-align:center; margin-bottom: 20px;">
+            <h2 style="color: var(--primary); margin: 0;">ChipData ID 集合比對工具</h2>
+            <p style="color: #64748b;">比對不同組別間的 ID 是否一致 (不限順序)初版</p>
+        </div>
+
+        <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+            <strong>將 EOM-4, EOM-5 等資料夾拖入此處</strong>
+            <input type="file" id="fileInput" webkitdirectory directory multiple style="display:none">
+        </div>
+
+        <div id="resultArea"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const resultArea = document.getElementById('resultArea');
+
+        // 1. 設定檔案讀取監聽
+        document.getElementById('dropZone').addEventListener('dragover', (e) => e.preventDefault());
+        document.getElementById('dropZone').addEventListener('drop', (e) => {
+            e.preventDefault();
+            processFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => processFiles(e.target.files));
+
+        function processFiles(files) {
+            const fileList = Array.from(files);
+            const groupMap = {}; // 格式: { "EOM-5": Set("ID1", "ID2"), "EOM-4": Set(...) }
+            const processedPaths = new Set();
+
+            // 2. 解析路徑並收集 ID
+            fileList.forEach(file => {
+                const path = file.webkitRelativePath;
+                const segments = path.split('/');
+                const chipIdx = segments.indexOf('ChipData');
+
+                if (chipIdx !== -1 && segments.length > chipIdx + 1) {
+                    const subFolder = segments[chipIdx + 1];
+                    const parent = segments[chipIdx - 1]; // 大資料夾名稱
+                    const key = parent + "||" + subFolder;
+
+                    if (!processedPaths.has(key)) {
+                        processedPaths.add(key);
+                        const id = subFolder.split('_')[3];
+                        if (id) {
+                            if (!groupMap[parent]) groupMap[parent] = new Set();
+                            groupMap[parent].add(id);
+                        }
+                    }
+                }
+            });
+
+            renderComparison(groupMap);
+        }
+
+        function renderComparison(groupMap) {
+            const parents = Object.keys(groupMap).sort();
+            if (parents.length < 2) {
+                resultArea.innerHTML = '<p style="color:orange;">請至少上傳兩個大資料夾進行比對。</p>';
+                return;
+            }
+
+            // 以第一個資料夾為基準 A
+            const baseFolder = parents[0];
+            const baseSet = groupMap[baseFolder];
+
+            let html = `<h3>比對基準: ${baseFolder} (共 ${baseSet.size} 個 ID)</h3>`;
+
+            // 3. 逐一跟基準 A 比對
+            for (let i = 1; i < parents.length; i++) {
+                const targetFolder = parents[i];
+                const targetSet = groupMap[targetFolder];
+
+                // 找差異: 基準有的 target 沒有 (Missing)
+                const missing = [...baseSet].filter(id => !targetSet.has(id));
+                // 找差異: target 有的基準沒有 (Unexpected)
+                const extra = [...targetSet].filter(id => !baseSet.has(id));
+
+                const isMatch = missing.length === 0 && extra.length === 0 && baseSet.size === targetSet.size;
+
+                html += `
+                <div class="summary-card ${isMatch ? 'ok-card' : 'fail-card'}">
+                    <strong>比對對象: ${targetFolder}</strong><br>
+                    狀態: ${isMatch ? '✅ 完全一致 (ID 種類與數量皆相同)' : '❌ 發現差異'}
+                    
+                    ${!isMatch ? `
+                        <div style="margin-top:10px; border-top: 1px solid rgba(0,0,0,0.1); padding-top:10px;">
+                            ${missing.length > 0 ? `<div>⚠️ 缺失 (基準有但此處無): <span class="diff-list">${missing.join(', ')}</span></div>` : ''}
+                            ${extra.length > 0 ? `<div>➕ 多出 (基準無但此處多出): <span class="diff-list">${extra.join(', ')}</span></div>` : ''}
+                            ${(baseSet.size !== targetSet.size) ? `<div>📊 數量比對: 基準(${baseSet.size}) vs 此處(${targetSet.size})</div>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            }
+
+            // 4. 列出完整 ID 清單對照表 (選填，方便視覺核對)
+            html += `
+            <table>
+                <thead><tr><th>資料夾名稱</th><th>所有 ID 清單</th></tr></thead>
+                <tbody>
+                    ${parents.map(p => `
+                        <tr>
+                            <td>${p}</td>
+                            <td>${[...groupMap[p]].sort().map(id => `<span class="id-tag">${id}</span>`).join('')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+            resultArea.innerHTML = html;
+        }
+    </script>
+
+</body>
+
+</html>
