@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日檢分析工具 V3.4.1</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <header
+            class="mb-8 border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">日檢分析工具 <span
+                        class="text-sm font-normal bg-amber-100 text-amber-800 px-2 py-0.5 rounded ml-2">V3.4.1
+                        </span></h1>
+                <p class="text-sm text-slate-500 mt-1">引入 Marginal Pass 臨界值百分比分析，自動識別接近邊界規格（黃/橘燈）的潛在風險晶粒。</p>
+            </div>
+            <button id="resetAllBtn"
+                class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-4 rounded-md transition text-sm flex items-center gap-1 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                    </path>
+                </svg>
+                🧹 完全重置工具
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="space-y-6 lg:col-span-1">
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        檔案上傳區
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-slate-600">1. 標準檔案  <span
+                                        class="text-red-500">*必填</span></label>
+                                <button onclick="clearFileInput('stdFile', 'stdFileInfo')"
+                                    class="text-xs text-rose-500 hover:underline cursor-pointer">❌ 清空</button>
+                            </div>
+                            <input type="file" id="stdFile" accept=".csv"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-md p-1 bg-slate-50">
+                            <span id="stdFileInfo" class="text-xs text-green-600 hidden mt-1 block font-medium"></span>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-slate-600">2. 第一天點測資料 (Day 1) <span
+                                        class="text-red-500">*必填</span></label>
+                                <button onclick="clearFileInput('day1File', 'day1FileInfo')"
+                                    class="text-xs text-rose-500 hover:underline cursor-pointer">❌ 清空</button>
+                            </div>
+                            <input type="file" id="day1File" accept=".csv"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-md p-1 bg-slate-50">
+                            <span id="day1FileInfo" class="text-xs text-blue-600 hidden mt-1 block font-medium"></span>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-slate-600">3. 第二天點測資料 (Day 2) <span
+                                        class="text-slate-400 font-normal">(選填)</span></label>
+                                <button onclick="clearFileInput('day2File', 'day2FileInfo')"
+                                    class="text-xs text-rose-500 hover:underline cursor-pointer">❌ 清空</button>
+                            </div>
+                            <input type="file" id="day2File" accept=".csv"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 border border-slate-200 rounded-md p-1 bg-slate-50">
+                            <span id="day2FileInfo"
+                                class="text-xs text-purple-600 hidden mt-1 block font-medium"></span>
+                        </div>
+                        <button id="compareBtn"
+                            class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-md shadow-xs transition duration-150 ease-in-out cursor-pointer text-center font-bold">
+                            執行自動模式比對
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        測試項目標準值規格
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-400">
+                                    <th class="py-2 font-medium">項目</th>
+                                    <th class="py-2 font-medium">標準範圍</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-600" id="specTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="statsDashboard" style="display: none;">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">點測總聯集顆數</p>
+                        <p class="text-2xl font-bold text-slate-700 mt-1" id="statTotal">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">成功比對標準檔</p>
+                        <p class="text-2xl font-bold text-indigo-600 mt-1" id="statMatched">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider" id="passLabel">雙日皆 PASS
+                        </p>
+                        <p class="text-2xl font-bold text-green-600 mt-1" id="statPass">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider" id="failLabel">任一天 FAIL
+                            顆數</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1" id="statFail">0</p>
+                    </div>
+                </div>
+
+                <div id="resultsCard" class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden"
+                    style="display: none;">
+                    <div
+                        class="px-6 py-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-slate-50">
+                        <h3 class="font-semibold text-slate-800" id="tableTitle">詳細比對結果</h3>
+                        <div class="flex items-center gap-2">
+                            <label for="filterStatus"
+                                class="text-xs font-medium text-slate-500 whitespace-nowrap">篩選條件：</label>
+                            <select id="filterStatus"
+                                class="text-xs border border-slate-300 rounded-md px-3 py-1.5 bg-white text-slate-700 focus:outline-hidden max-w-xs sm:max-w-md">
+                                <option value="ALL">全部顯示 (含未對應晶片)</option>
+                                <option value="MATCHED_ALL">僅顯示標準檔有的 CHIP ID</option>
+                                <option value="PASS">僅顯示 PASS 晶粒</option>
+                                <option value="MARGINAL_PASS">⚠️ 僅顯示「接近臨界值(黃/橘燈)」的 PASS 晶粒</option>
+                                <option value="FAIL">僅顯示 FAIL 晶粒</option>
+                                <option value="NOT_FOUND">僅顯示未對應到標準檔</option>
+                                <option value="D1P_D2F">【雙日專用】第一天 PASS ➡️ 第二天 FAIL</option>
+                                <option value="D1F_D2P">【雙日專用】第一天 FAIL ➡️ 第二天 PASS</option>
+                                <option value="BOTH_PASS_MATCHED">【雙日專用】雙日全數完美 PASS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[700px] overflow-y-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr
+                                    class="bg-slate-100 text-slate-600 font-semibold text-xs sticky top-0 border-b border-slate-200 z-10">
+                                    <th class="px-6 py-3 w-1/5">Chip ID</th>
+                                    <th class="px-6 py-3 w-1/5">綜合比對狀態</th>
+                                    <th class="px-6 py-3 w-3/5">測試項目、差距與臨界分析明細</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200" id="resultsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="emptyState" class="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-slate-900">等待載入數據檔案</h3>
+                    <p class="mt-1 text-sm text-slate-500">請在左側選擇上傳「標準檔 + Day 1」或「標準檔 + Day 1 + Day 2」。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const specs = {
+            'ITH': { type: 'pm', value: 0.147 },
+            'DLDI': { type: 'pm', value: 0.00686 },
+            'LB_50': { type: 'pm', value: 0.098 },
+            'ASYML_3': { type: 'pm', value: 0.392 },
+            'RES': { type: 'pm', value: 0.686 },
+            'WL_DC': { type: 'pm', value: 0.196 },
+            'WL_PWR_DC': { type: 'range', min: -2.94, max: 9.8 },
+            'IREV2': { type: 'pm', value: 0.0147 },
+            'BRKDN_V': { type: 'pm', value: 0.735 },
+            'LARAT1PT0': { type: 'pm', value: 0.0147 },
+            'LARAT2PT4': { type: 'pm', value: 0.0098 },
+            'V_NOISE': { type: 'pm', value: 1.96 }
+        };
+
+        // Render Specs Table (修正回歸點)
+        const specTableBody = document.getElementById('specTableBody');
+        Object.keys(specs).forEach(key => {
+            const spec = specs[key];
+            const row = document.createElement('tr');
+            let txt = spec.type === 'pm' ? `±${spec.value}` : `${spec.min} ~ ${spec.max}`;
+            row.innerHTML = `<td class="py-2 font-medium text-slate-700">${key}</td><td class="py-2 text-slate-500">${txt}</td>`;
+            specTableBody.appendChild(row);
+        });
+
+        let stdData = null, day1Data = null, day2Data = null;
+        let fullComparisonResults = [];
+        let isDualDayMode = false;
+
+        function setupFileListener(id, infoId, msg, callback) {
+            const element = document.getElementById(id);
+            element.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (!file) { clearFileInput(id, infoId); return; }
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function (res) {
+                        callback(res.data);
+                        document.getElementById(infoId).classList.remove('hidden');
+                        document.getElementById(infoId).innerText = `已載入 ${res.data.length} 筆${msg}`;
+                    }
+                });
+            });
+        }
+
+        setupFileListener('stdFile', 'stdFileInfo', '標準資料', data => stdData = data);
+        setupFileListener('day1File', 'day1FileInfo', 'Day 1 資料', data => day1Data = data);
+        setupFileListener('day2File', 'day2FileInfo', 'Day 2 資料', data => day2Data = data);
+
+        function clearFileInput(id, infoId) {
+            document.getElementById(id).value = "";
+            const infoEl = document.getElementById(infoId);
+            infoEl.classList.add('hidden');
+            infoEl.innerText = "";
+            if (id === 'stdFile') stdData = null;
+            if (id === 'day1File') day1Data = null;
+            if (id === 'day2File') day2Data = null;
+        }
+
+        document.getElementById('resetAllBtn').addEventListener('click', function () {
+            clearFileInput('stdFile', 'stdFileInfo');
+            clearFileInput('day1File', 'day1FileInfo');
+            clearFileInput('day2File', 'day2FileInfo');
+            fullComparisonResults = [];
+            document.getElementById('statsDashboard').style.display = 'none';
+            document.getElementById('resultsCard').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('filterStatus').value = 'ALL';
+        });
+
+        document.getElementById('filterStatus').addEventListener('change', function () {
+            if (fullComparisonResults.length > 0) renderResultsTable();
+        });
+
+        document.getElementById('compareBtn').addEventListener('click', function () {
+            if (!stdData || !day1Data) {
+                alert('錯誤：請確認必填的「標準檔案」與「第一天點測資料 (Day 1)」皆已上傳！');
+                return;
+            }
+
+            isDualDayMode = day2Data !== null && day2Data.length > 0;
+            document.getElementById('passLabel').innerText = isDualDayMode ? "雙日皆 PASS" : "測試 PASS 顆數";
+            document.getElementById('failLabel').innerText = isDualDayMode ? "任一天 FAIL 顆數" : "測試 FAIL 顆數";
+            document.getElementById('tableTitle').innerText = isDualDayMode ? "雙日比對結果(含臨界分析)" : "單日點測比對結果(含臨界分析)";
+
+            const stdMap = {}, day1Map = {}, day2Map = {};
+            const allChipIds = new Set();
+
+            stdData.forEach(r => { if (r.CHIP_ID) stdMap[r.CHIP_ID.trim()] = r; });
+            day1Data.forEach(r => { if (r.CHIP_ID) { const id = r.CHIP_ID.trim(); day1Map[id] = r; allChipIds.add(id); } });
+            if (isDualDayMode) { day2Data.forEach(r => { if (r.CHIP_ID) { const id = r.CHIP_ID.trim(); day2Map[id] = r; allChipIds.add(id); } }); }
+
+            fullComparisonResults = [];
+            let matchedCount = 0, passCount = 0, failCount = 0;
+
+            allChipIds.forEach(chipId => {
+                const stdRow = stdMap[chipId];
+                const d1Row = day1Map[chipId];
+                const d2Row = day2Map[chipId];
+
+                if (!stdRow) {
+                    fullComparisonResults.push({ chipId, status: 'NOT_FOUND', itemsList: [], d1OverallPass: false, d2OverallPass: false, hasMarginal: false });
+                    return;
+                }
+
+                matchedCount++;
+                let overallStatus = 'PASS';
+                let itemsList = [];
+                let d1HasFailure = false, d2HasFailure = false;
+                let chipHasMarginal = false;
+
+                Object.keys(specs).forEach(item => {
+                    const spec = specs[item];
+                    const stdVal = parseFloat(stdRow[item]);
+                    const d1Val = d1Row && d1Row[item] !== undefined ? parseFloat(d1Row[item]) : NaN;
+                    const d2Val = isDualDayMode && d2Row && d2Row[item] !== undefined ? parseFloat(d2Row[item]) : NaN;
+
+                    if (isNaN(stdVal)) return;
+
+                    let d1Pass = true, d2Pass = true;
+                    let d1Diff = NaN, d2Diff = NaN;
+                    let d1Ratio = 0, d2Ratio = 0;
+                    let d1Out = 0, d2Out = 0;
+
+                    if (!isNaN(d1Val)) {
+                        d1Diff = d1Val - stdVal;
+                        if (spec.type === 'pm') {
+                            d1Ratio = (Math.abs(d1Diff) / spec.value) * 100;
+                            if (Math.abs(d1Diff) > spec.value) { d1Pass = false; d1Out = d1Diff > 0 ? d1Diff - spec.value : d1Diff + spec.value; }
+                        } else {
+                            const rangeMax = d1Diff > 0 ? spec.max : Math.abs(spec.min);
+                            d1Ratio = (Math.abs(d1Diff) / rangeMax) * 100;
+                            if (d1Diff < spec.min || d1Diff > spec.max) { d1Pass = false; d1Out = d1Diff > spec.max ? d1Diff - spec.max : d1Diff - spec.min; }
+                        }
+                    } else { d1Pass = false; }
+                    if (!d1Pass) d1HasFailure = true;
+
+                    if (isDualDayMode) {
+                        if (!isNaN(d2Val)) {
+                            d2Diff = d2Val - stdVal;
+                            if (spec.type === 'pm') {
+                                d2Ratio = (Math.abs(d2Diff) / spec.value) * 100;
+                                if (Math.abs(d2Diff) > spec.value) { d2Pass = false; d2Out = d2Diff > 0 ? d2Diff - spec.value : d2Diff + spec.value; }
+                            } else {
+                                const rangeMax = d2Diff > 0 ? spec.max : Math.abs(spec.min);
+                                d2Ratio = (Math.abs(d2Diff) / rangeMax) * 100;
+                                if (d2Diff < spec.min || d2Diff > spec.max) { d2Pass = false; d2Out = d2Diff > spec.max ? d2Diff - spec.max : d2Diff - spec.min; }
+                            }
+                        } else { d2Pass = false; }
+                        if (!d2Pass) d2HasFailure = true;
+                    }
+
+                    let isItemMarginal = false;
+                    if ((d1Pass && d1Ratio >= 70) || (isDualDayMode && d2Pass && d2Ratio >= 70)) {
+                        isItemMarginal = true;
+                        chipHasMarginal = true;
+                    }
+
+                    if (!d1Pass || (isDualDayMode && !d2Pass)) overallStatus = 'FAIL';
+
+                    itemsList.push({
+                        item, stdVal, d1Val, d2Val, d1Diff, d2Diff, d1Pass, d2Pass, d1Ratio, d2Ratio, d1Out, d2Out, isItemMarginal,
+                        dayShift: (isDualDayMode && !isNaN(d2Val) && !isNaN(d1Val)) ? (d2Val - d1Val) : NaN,
+                        specText: spec.type === 'pm' ? `±${spec.value}` : `${spec.min} ~ ${spec.max}`
+                    });
+                });
+
+                if (overallStatus === 'PASS') passCount++;
+                if (overallStatus === 'FAIL') failCount++;
+
+                fullComparisonResults.push({
+                    chipId, status: overallStatus, itemsList,
+                    d1OverallPass: !d1HasFailure,
+                    d2OverallPass: isDualDayMode ? !d2HasFailure : false,
+                    hasMarginal: chipHasMarginal
+                });
+            });
+
+            document.getElementById('statTotal').innerText = allChipIds.size;
+            document.getElementById('statMatched').innerText = matchedCount;
+            document.getElementById('statPass').innerText = passCount;
+            document.getElementById('statFail').innerText = failCount;
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsDashboard').style.display = 'grid';
+            document.getElementById('resultsCard').style.display = 'block';
+
+            renderResultsTable();
+        });
+
+        function renderResultsTable() {
+            const filterValue = document.getElementById('filterStatus').value;
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            fullComparisonResults.forEach(res => {
+                if (filterValue === 'MATCHED_ALL' && res.status === 'NOT_FOUND') return;
+                if (filterValue === 'PASS' && res.status !== 'PASS') return;
+                if (filterValue === 'FAIL' && res.status !== 'FAIL') return;
+                if (filterValue === 'NOT_FOUND' && res.status !== 'NOT_FOUND') return;
+                if (filterValue === 'MARGINAL_PASS' && !(res.status === 'PASS' && res.hasMarginal === true)) return;
+                if (filterValue === 'D1P_D2F' && (!isDualDayMode || res.status === 'NOT_FOUND' || !(res.d1OverallPass && !res.d2OverallPass))) return;
+                if (filterValue === 'D1F_D2P' && (!isDualDayMode || res.status === 'NOT_FOUND' || !(!res.d1OverallPass && res.d2OverallPass))) return;
+                if (filterValue === 'BOTH_PASS_MATCHED' && (res.status === 'NOT_FOUND' || !isDualDayMode || res.status !== 'PASS')) return;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-200';
+
+                let statusBadge = '';
+                if (res.status === 'PASS') {
+                    if (res.hasMarginal) {
+                        statusBadge = '<span class="inline-flex flex-col gap-1"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 text-center">PASS (接近臨界)</span><span class="text-[10px] bg-amber-50 border border-amber-200 text-amber-600 font-bold px-1 py-0.5 rounded text-center">⚠️ 黃/橘預警</span></span>';
+                    } else {
+                        statusBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">${isDualDayMode ? '雙日安全 PASS' : '安全 PASS'}</span>`;
+                    }
+                } else if (res.status === 'FAIL') {
+                    statusBadge = `<span class="inline-flex flex-col gap-1"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 text-center">FAIL</span></span>`;
+                } else {
+                    statusBadge = '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">未對應標準檔</span>';
+                }
+
+                let detailsHTML = `<div class="space-y-2 py-2">`;
+
+                if (res.status === 'NOT_FOUND') {
+                    detailsHTML = '<span class="text-xs text-slate-400 italic py-2 block">此晶片不存在於標準檔案中</span>';
+                } else {
+                    res.itemsList.forEach(d => {
+                        let cardBg = "bg-slate-50 border-slate-200";
+                        let pillHTML = "";
+                        let showCard = false;
+
+                        if (!d.d1Pass || (isDualDayMode && !d.d2Pass)) {
+                            cardBg = "bg-rose-50/60 border-rose-200";
+                            pillHTML = `<span class="text-rose-700 font-bold bg-rose-100 text-[11px] px-2 py-0.5 rounded-sm border border-rose-200">❌ 超出規格界限</span>`;
+                            showCard = true;
+                        } else if (d.isItemMarginal) {
+                            const maxRatio = Math.max(d.d1Ratio, isDualDayMode ? d.d2Ratio : 0);
+                            if (maxRatio >= 85) {
+                                cardBg = "bg-orange-50/60 border-orange-200";
+                                pillHTML = `<span class="text-orange-700 font-black bg-orange-100 text-[11px] px-2 py-0.5 rounded-sm border border-orange-200">🟠 極度接近臨界 (${maxRatio.toFixed(1)}%)</span>`;
+                            } else {
+                                cardBg = "bg-amber-50/60 border-amber-200";
+                                pillHTML = `<span class="text-amber-700 font-bold bg-amber-100 text-[11px] px-2 py-0.5 rounded-sm border border-amber-200">🟡 接近臨界邊緣 (${maxRatio.toFixed(1)}%)</span>`;
+                            }
+                            showCard = true;
+                        }
+
+                        if (filterValue === 'ALL' || filterValue === 'MATCHED_ALL') {
+                            if (!d.d1Pass || (isDualDayMode && !d.d2Pass) || d.isItemMarginal) showCard = true;
+                        }
+
+                        if (!showCard) return;
+
+                        const diffSign1 = d.d1Diff > 0 ? '+' : '';
+                        const diffSign2 = d.d2Diff > 0 ? '+' : '';
+
+                        if (isDualDayMode) {
+                            const shiftSign = d.dayShift > 0 ? '+' : '';
+                            const shiftColor = d.dayShift > 0 ? 'text-amber-600' : (d.dayShift < 0 ? 'text-teal-600' : 'text-slate-500');
+
+                            detailsHTML += `
+                                <div class="p-3 border rounded-xl shadow-3xs ${cardBg}">
+                                    <div class="flex items-center justify-between gap-2 mb-1.5 border-b border-slate-200/50 pb-1">
+                                        <span class="font-bold text-xs text-slate-800 bg-white border border-slate-300 px-2 py-0.5 rounded">${d.item}</span>
+                                        ${pillHTML}
+                                    </div>
+                                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px]">
+                                        <div><span class="text-slate-400 block">規格/基準：</span><span class="font-medium text-slate-700">${d.specText}</span><span class="text-slate-400 font-mono text-[10px] block">Std: ${d.stdVal.toFixed(4)}</span></div>
+                                        <div class="${d.d1Pass ? '' : 'text-red-600 font-medium'}"><span class="text-slate-400 block">Day 1 測值：</span><span class="font-bold">${d.d1Val.toFixed(4)}</span><span class="block font-mono text-[10px]">差: ${diffSign1}${d.d1Diff.toFixed(4)} (${d.d1Ratio.toFixed(0)}%)</span></div>
+                                        <div class="${d.d2Pass ? '' : 'text-red-600 font-medium'}"><span class="text-slate-400 block">Day 2 測值：</span><span class="font-bold">${isNaN(d.d2Val) ? '-' : d.d2Val.toFixed(4)}</span><span class="block font-mono text-[10px]">差: ${diffSign2}${isNaN(d.d2Diff) ? '-' : d.d2Diff.toFixed(4)} (${isNaN(d.d2Ratio) ? '-' : d.d2Ratio.toFixed(0)}%)</span></div>
+                                        <div class="bg-white/60 p-1 rounded"><span class="text-slate-400 block">🔄 雙日推移：</span><span class="font-extrabold ${shiftColor}">${isNaN(d.dayShift) ? '-' : `${shiftSign}${d.dayShift.toFixed(4)}`}</span></div>
+                                    </div>
+                                </div>`;
+                        } else {
+                            detailsHTML += `
+                                <div class="p-3 border rounded-xl shadow-2xs ${cardBg}">
+                                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                                        <span class="font-bold text-xs text-slate-800 bg-white border border-slate-300 px-2 py-0.5 rounded">${d.item}</span>
+                                        ${pillHTML}
+                                    </div>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] pt-1.5 border-t border-slate-200/40">
+                                        <div><span class="text-slate-400">點測數值：</span><span class="font-bold text-slate-900">${d.d1Val.toFixed(4)}</span></div>
+                                        <div><span class="text-slate-400">標準檔案：</span><span class="font-medium text-slate-700">${d.stdVal.toFixed(4)}</span></div>
+                                        <div><span class="text-slate-400">與標準差：</span><span class="font-bold text-slate-900">${diffSign1}${d.d1Diff.toFixed(4)}</span></div>
+                                        <div><span class="text-slate-400">規格範圍：</span><span class="font-mono text-slate-500">${d.specText} (已用 ${d.d1Ratio.toFixed(1)}%)</span></div>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+
+                    if (detailsHTML === `<div class="space-y-2 py-2">` && res.status === 'PASS') {
+                        detailsHTML = '<span class="text-xs text-green-600 font-medium py-2 block flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 晶粒狀態極度健康，項目全數遠離臨界值 (&lt;70%)</span>';
+                    } else {
+                        detailsHTML += `</div>`;
+                    }
+                }
+
+                if ((filterValue === 'D1P_D2F' || filterValue === 'D1F_D2P' || filterValue === 'BOTH_PASS_MATCHED') && !isDualDayMode) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-sm text-amber-500 font-medium bg-amber-50/50">ℹ️ 您選取了雙日專用篩選條件，請載入「Day 2」檔案以啟用交叉分析。</td></tr>`;
+                    return;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">${res.chipId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
+                    <td class="px-6 py-3">${detailsHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (tbody.innerHTML === '') {
+                tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-sm text-slate-400 italic bg-slate-50/50">符合此篩選條件的晶片數量為 0 顆</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
