@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶片測試結果比對工具</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8 border-b border-slate-200 pb-4">
+            <h1 class="text-2xl font-bold text-slate-900">晶片標準檔與點測結果比對工具</h1>
+            <p class="text-sm text-slate-500 mt-1">上傳標準檔案與點測資料，自動比對各項參數是否符合規範。</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Panel: Upload and Specs -->
+            <div class="space-y-6 lg:col-span-1">
+                <!-- File Upload Card -->
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        檔案上傳
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">1. 標準檔案 (LBT18-2)</label>
+                            <input type="file" id="stdFile" accept=".csv"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-md p-1 bg-slate-50">
+                            <span id="stdFileInfo" class="text-xs text-green-600 hidden mt-1 block">已載入</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">2. 今日點測結果</label>
+                            <input type="file" id="todayFile" accept=".csv"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-md p-1 bg-slate-50">
+                            <span id="todayFileInfo" class="text-xs text-green-600 hidden mt-1 block">已載入</span>
+                        </div>
+                        <button id="compareBtn"
+                            class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-xs transition duration-150 ease-in-out cursor-pointer text-center">
+                            開始進行比對
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spec Standard Card -->
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        測試項目標準值規格
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-400">
+                                    <th class="py-2 font-medium">項目</th>
+                                    <th class="py-2 font-medium">標準範圍</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-600" id="specTableBody">
+                                <!-- Dynamic standard specs loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Summary & Analysis Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Dashboard Statistics -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="statsDashboard" style="display: none;">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">點測總顆數</p>
+                        <p class="text-2xl font-bold text-slate-700 mt-1" id="statTotal">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">成功比對顆數</p>
+                        <p class="text-2xl font-bold text-indigo-600 mt-1" id="statMatched">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">PASS 顆數</p>
+                        <p class="text-2xl font-bold text-green-600 mt-1" id="statPass">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">FAIL 顆數</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1" id="statFail">0</p>
+                    </div>
+                </div>
+
+                <!-- Results Table Card -->
+                <div id="resultsCard" class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden"
+                    style="display: none;">
+                    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <h3 class="font-semibold text-slate-800">比對詳細結果</h3>
+                        <div class="flex gap-2">
+                            <select id="filterStatus"
+                                class="text-xs border border-slate-300 rounded-md px-2 py-1 bg-white text-slate-600">
+                                <option value="ALL">全部顯示</option>
+                                <option value="PASS">僅顯示 PASS</option>
+                                <option value="FAIL">僅顯示 FAIL</option>
+                                <option value="NOT_FOUND">僅顯示未對應到標準檔</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr
+                                    class="bg-slate-100 text-slate-500 font-medium text-xs sticky top-0 border-b border-slate-200">
+                                    <th class="px-6 py-3">Chip ID</th>
+                                    <th class="px-6 py-3">比對狀態</th>
+                                    <th class="px-6 py-3">異常項目與差距</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200" id="resultsTableBody">
+                                <!-- Results rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Initial Empty State -->
+                <div id="emptyState" class="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-slate-900">尚無資料</h3>
+                    <p class="mt-1 text-sm text-slate-500">請在左側上傳標準檔案及今日點測檔案，並點擊「開始進行比對」。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Predefined specifications
+        const specs = {
+            'ITH': { type: 'pm', value: 0.147 },
+            'DLDI': { type: 'pm', value: 0.00686 },
+            'LB_50': { type: 'pm', value: 0.098 },
+            'ASYML_3': { type: 'pm', value: 0.392 },
+            'RES': { type: 'pm', value: 0.686 },
+            'WL_DC': { type: 'pm', value: 0.196 },
+            'WL_PWR_DC': { type: 'range', min: -2.94, max: 9.8 },
+            'IREV2': { type: 'pm', value: 0.0147 },
+            'BRKDN_V': { type: 'pm', value: 0.735 },
+            'LARAT1PT0': { type: 'pm', value: 0.0147 },
+            'LARAT2PT4': { type: 'pm', value: 0.0098 },
+            'V_NOISE': { type: 'pm', value: 1.96 }
+        };
+
+        // Render Specs Table
+        const specTableBody = document.getElementById('specTableBody');
+        Object.keys(specs).forEach(key => {
+            const spec = specs[key];
+            const row = document.createElement('tr');
+            let rangeText = '';
+            if (spec.type === 'pm') {
+                rangeText = `±${spec.value}`;
+            } else if (spec.type === 'range') {
+                rangeText = `${spec.min} ~ ${spec.max}`;
+            }
+            row.innerHTML = `
+                <td class="py-2 font-medium text-slate-700">${key}</td>
+                <td class="py-2 text-slate-500">${rangeText}</td>
+            `;
+            specTableBody.appendChild(row);
+        });
+
+        let stdData = null;
+        let todayData = null;
+        let fullComparisonResults = [];
+
+        // Handle File Loading
+        document.getElementById('stdFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    stdData = results.data;
+                    document.getElementById('stdFileInfo').classList.remove('hidden');
+                    document.getElementById('stdFileInfo').innerText = `已載入 ${stdData.length} 筆標準資料`;
+                }
+            });
+        });
+
+        document.getElementById('todayFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    todayData = results.data;
+                    document.getElementById('todayFileInfo').classList.remove('hidden');
+                    document.getElementById('todayFileInfo').innerText = `已載入 ${todayData.length} 筆今日測試資料`;
+                }
+            });
+        });
+
+        // Comparison Logic
+        document.getElementById('compareBtn').addEventListener('click', function () {
+            if (!stdData || !todayData) {
+                alert('請同時上傳標準檔案與今日測試資料！');
+                return;
+            }
+
+            // Create a map for standard data using trimmed CHIP_ID
+            const stdMap = {};
+            stdData.forEach(row => {
+                if (row.CHIP_ID) {
+                    const id = row.CHIP_ID.trim();
+                    stdMap[id] = row;
+                }
+            });
+
+            fullComparisonResults = [];
+            let totalCount = todayData.length;
+            let matchedCount = 0;
+            let passCount = 0;
+            let failCount = 0;
+
+            todayData.forEach(row => {
+                if (!row.CHIP_ID) return;
+                const chipId = row.CHIP_ID.trim();
+                const stdRow = stdMap[chipId];
+
+                let status = 'PASS';
+                let failedItems = [];
+
+                if (!stdRow) {
+                    status = 'NOT_FOUND';
+                    fullComparisonResults.push({
+                        chipId,
+                        status,
+                        details: []
+                    });
+                    return;
+                }
+
+                matchedCount++;
+
+                // Check each parameter
+                Object.keys(specs).forEach(item => {
+                    const spec = specs[item];
+                    const todayValStr = row[item];
+                    const stdValStr = stdRow[item];
+
+                    if (todayValStr !== undefined && stdValStr !== undefined) {
+                        const todayVal = parseFloat(todayValStr);
+                        const stdVal = parseFloat(stdValStr);
+                        if (!isNaN(todayVal) && !isNaN(stdVal)) {
+                            const diff = todayVal - stdVal;
+                            let isPass = true;
+                            let outOfBoundsBy = 0;
+
+                            if (spec.type === 'pm') {
+                                if (Math.abs(diff) > spec.value) {
+                                    isPass = false;
+                                    outOfBoundsBy = diff > 0 ? diff - spec.value : diff + spec.value;
+                                }
+                            } else if (spec.type === 'range') {
+                                if (diff < spec.min || diff > spec.max) {
+                                    isPass = false;
+                                    outOfBoundsBy = diff > spec.max ? diff - spec.max : diff - spec.min;
+                                }
+                            }
+
+                            if (!isPass) {
+                                status = 'FAIL';
+                                failedItems.push({
+                                    item,
+                                    todayVal,
+                                    stdVal,
+                                    diff,
+                                    specText: spec.type === 'pm' ? `±${spec.value}` : `${spec.min} ~ ${spec.max}`,
+                                    outOfBoundsBy
+                                });
+                            }
+                        }
+                    }
+                });
+
+                if (status === 'PASS') passCount++;
+                if (status === 'FAIL') failCount++;
+
+                fullComparisonResults.push({
+                    chipId,
+                    status,
+                    details: failedItems
+                });
+            });
+
+            // Update Dashboard
+            document.getElementById('statTotal').innerText = totalCount;
+            document.getElementById('statMatched').innerText = matchedCount;
+            document.getElementById('statPass').innerText = passCount;
+            document.getElementById('statFail').innerText = failCount;
+
+            // Show UI Elements
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsDashboard').style.display = 'grid';
+            document.getElementById('resultsCard').style.display = 'block';
+
+            renderResultsTable();
+        });
+
+        // Filter functionality
+        document.getElementById('filterStatus').addEventListener('change', renderResultsTable);
+
+        function renderResultsTable() {
+            const filterValue = document.getElementById('filterStatus').value;
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            fullComparisonResults.forEach(res => {
+                if (filterValue !== 'ALL' && res.status !== filterValue) return;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition duration-150';
+
+                let statusBadge = '';
+                if (res.status === 'PASS') {
+                    statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">PASS</span>';
+                } else if (res.status === 'FAIL') {
+                    statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">FAIL</span>';
+                } else {
+                    statusBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">未對應到標準檔</span>';
+                }
+
+                let detailsText = '';
+                if (res.status === 'FAIL') {
+                    detailsText = res.details.map(d => {
+                        return `<div class="mb-1 text-xs">
+                            <span class="font-semibold text-slate-700">${d.item}</span>: 
+                            今日=${d.todayVal.toFixed(4)}, 標準=${d.stdVal.toFixed(4)}, 
+                            差值=<span class="${d.diff > 0 ? 'text-red-500' : 'text-blue-500'} font-medium">${d.diff > 0 ? '+' : ''}${d.diff.toFixed(4)}</span> 
+                            (規格: ${d.specText}, 超出: <span class="font-bold">${d.outOfBoundsBy > 0 ? '+' : ''}${d.outOfBoundsBy.toFixed(4)}</span>)
+                        </div>`;
+                    }).join('');
+                } else if (res.status === 'NOT_FOUND') {
+                    detailsText = '<span class="text-xs text-slate-400 italic">在標準檔案中找不到此 Chip ID</span>';
+                } else {
+                    detailsText = '<span class="text-xs text-green-600">所有項目均在規格內</span>';
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${res.chipId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500">${detailsText}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+
+</html>
