@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>晶片點測結果智能比對與臨界分析工具 V3.4.6</title>
+    <title>日檢分析工具 V3.5</title>
 
     <style>
         body {
@@ -803,8 +803,8 @@
     <div class="max-w-7xl">
         <header>
             <div>
-                <h1>晶片標準檔與點測結果比對工具 <span class="version-badge">V3.4.6 終極修正版</span></h1>
-                <p class="subtitle">100% 離線封裝。已修復規格表回歸、按鈕樣式優化，且強制臨界標籤不換行。</p>
+                <h1>日檢分析工具_產線用 <span class="version-badge">V3.5</span></h1>
+                <p class="subtitle">離線封裝。已修復規格表回歸、按鈕樣式優化，且強制臨界標籤不換行。</p>
             </div>
             <button id="resetAllBtn" class="btn-reset">
                 <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -830,7 +830,7 @@
                     <div class="space-y-4">
                         <div class="upload-group">
                             <div class="upload-header">
-                                <label class="label">1. 標準檔案 (LBT18-2) <span class="req">*必填</span></label>
+                                <label class="label">1. 標準檔案 <span class="req">*必填</span></label>
                                 <button onclick="clearFileInput('stdFile', 'stdFileInfo')" class="clear-btn">❌
                                     清空</button>
                             </div>
@@ -1215,7 +1215,7 @@
                 let detailsHTML = `<div class="inner-cards-container">`;
 
                 if (res.status === 'NOT_FOUND') {
-                    detailsHTML = '<span class="text-xs text-slate-400 italic py-2 block">此晶片不存在於 LBT18-2 標準檔案中</span>';
+                    detailsHTML = '<span class="text-xs text-slate-400 italic py-2 block">此晶片不存在於標準檔案中</span>';
                 } else {
                     res.itemsList.forEach(d => {
                         let cardBg = "inner-card";
