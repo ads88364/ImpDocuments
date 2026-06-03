@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶片點測結果智能比對與臨界分析工具 V3.4.6</title>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .max-w-7xl {
+            max-width: 85rem;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Header 區塊 */
+        header {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 1.25rem;
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            header {
+                flex-direction: row;
+                align-items: center;
+            }
+        }
+
+        h1 {
+            font-size: 1.625rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .version-badge {
+            font-size: 0.875rem;
+            font-weight: 700;
+            background-color: #dbeafe;
+            color: #1e40af;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #bfdbfe;
+        }
+
+        .subtitle {
+            font-size: 0.935rem;
+            color: #475569;
+            margin-top: 0.375rem;
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+
+        /* 左右大佈局 */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1140px) {
+            .grid-layout {
+                grid-template-columns: 1.1fr 2fr;
+            }
+        }
+
+        /* 卡片共用樣式 */
+        .card {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+        }
+
+        .space-y-4>*+* {
+            margin-top: 1rem;
+        }
+
+        .space-y-6>*+* {
+            margin-top: 1.5rem;
+        }
+
+        /* 上傳欄位組 */
+        .upload-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .req {
+            color: #dc2626;
+            margin-left: 0.125rem;
+            font-weight: 800;
+        }
+
+        .optional {
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .clear-btn {
+            font-size: 0.8rem;
+            color: #e11d48;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .clear-btn:hover {
+            text-decoration: underline;
+        }
+
+        /* 核心優化：完全還原原版質感的「選擇檔案」自訂外觀 */
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .file-input-custom {
+            width: 100%;
+            font-size: 0.875rem;
+            color: #3730a3;
+            font-weight: 600;
+            text-align: center;
+            border: 1px dashed #6366f1;
+            border-radius: 0.5rem;
+            padding: 0.625rem;
+            background-color: #f5f7ff;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        .file-input-custom:hover {
+            background-color: #e0e7ff;
+            border-color: #4f46e5;
+        }
+
+        .file-input-real {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* 檔案資訊提示 */
+        .info-msg {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 0.625rem;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            box-shadow: inset 0 1px 1px 0 rgba(0, 0, 0, 0.02);
+        }
+
+        .msg-std {
+            color: #15803d;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+
+        .msg-d1 {
+            color: #1d4ed8;
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+        }
+
+        .msg-d2 {
+            color: #7e22ce;
+            background-color: #fbf2ff;
+            border: 1px solid #e9d5ff;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 按鈕樣式 */
+        .btn-primary {
+            width: 100%;
+            margin-top: 0.75rem;
+            background-color: #4f46e5;
+            color: #fff;
+            font-weight: 700;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.05s;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px 0 rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.99);
+        }
+
+        .btn-reset {
+            background-color: #fff;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            transition: background-color 0.15s, color 0.15s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-reset:hover {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* 左側規格表 */
+        .spec-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 4px solid #4f46e5;
+            padding-left: 0.5rem;
+        }
+
+        .spec-table {
+            width: 100%;
+            text-align: left;
+            font-size: 0.85rem;
+            border-collapse: collapse;
+        }
+
+        .spec-table th {
+            border-bottom: 2px solid #e2e8f0;
+            color: #475569;
+            padding: 0.75rem 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .spec-table td {
+            padding: 0.625rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        /* 大數據儀表板 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        .stat-box {
+            background-color: #fff;
+            padding: 1.25rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        .stat-val {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-top: 0.375rem;
+            margin-bottom: 0;
+            line-height: 2.25rem;
+        }
+
+        .val-total {
+            color: #0f172a;
+        }
+
+        .val-match {
+            color: #312e81;
+        }
+
+        .val-pass {
+            color: #166534;
+        }
+
+        .val-fail {
+            color: #991b1b;
+        }
+
+        /* 大報表結果卡片架構 */
+        .results-card {
+            background-color: #fff;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .results-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .results-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .results-header h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            font-size: 0.85rem;
+            border: 1px solid #94a3b8;
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            background-color: #fff;
+            color: #0f172a;
+            outline: none;
+            font-weight: 600;
+            transition: border-color 0.15s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-select:focus {
+            border-color: #4f46e5;
+        }
+
+        /* 表格內刻度 */
+        .table-container {
+            overflow-x: auto;
+            max-height: 750px;
+            overflow-y: auto;
+        }
+
+        .main-table {
+            width: 100%;
+            text-align: left;
+            font-size: 0.95rem;
+            border-collapse: collapse;
+        }
+
+        .main-table th {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.875rem 1.5rem;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid #cbd5e1;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .main-table td {
+            padding: 1.5rem 1.5rem;
+            border-bottom: 1px solid #cbd5e1;
+            vertical-align: top;
+        }
+
+        .main-table tr {
+            transition: background-color 0.15s;
+        }
+
+        .main-table tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .chip-id-text {
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #0f172a;
+            font-family: monospace;
+            letter-spacing: 0.02em;
+        }
+
+        /* 狀態徽章：核心優化「強制不換行 white-space: nowrap」 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            line-height: 1.25rem;
+            text-align: center;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+        }
+
+        .badge-pass {
+            background-color: #dcfce7;
+            color: #14532d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-fail {
+            background-color: #fee2e2;
+            color: #7f1d1d;
+            border: 1px solid #fca5a5;
+        }
+
+        .badge-warn {
+            background-color: #fef3c7;
+            color: #78350f;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-null {
+            background-color: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .badge-sub {
+            font-size: 11px;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            display: block;
+            max-width: max-content;
+            white-space: nowrap !important;
+        }
+
+        /* 明細小卡片（工業高辨識度優化） */
+        .inner-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .inner-card {
+            padding: 1.25rem;
+            border-radius: 0.625rem;
+            border: 2px solid #e2e8f0;
+            background-color: #f8fafc;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+            box-sizing: border-box;
+        }
+
+        .card-fail {
+            background-color: #fffdfd;
+            border-color: #f87171;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.04);
+        }
+
+        .card-orange {
+            background-color: #fffbf5;
+            border-color: #fb923c;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.04);
+        }
+
+        .card-amber {
+            background-color: #fffdfa;
+            border-color: #fbbf24;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.04);
+        }
+
+        .inner-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(203, 213, 225, 0.6);
+        }
+
+        .item-label {
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #0f172a;
+            background-color: #fff;
+            border: 2px solid #94a3b8;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            letter-spacing: 0.03em;
+        }
+
+        .pill-text {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 0.25rem 0.625rem;
+            border-radius: 0.375rem;
+            border: 1px solid transparent;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .pill-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border-color: #fca5a5;
+        }
+
+        .pill-orange {
+            background-color: #ffedd5;
+            color: #9a3412;
+            border-color: #fed7aa;
+        }
+
+        .pill-amber {
+            background-color: #fef3c7;
+            color: #854d0e;
+            border-color: #fde68a;
+        }
+
+        /* 數據欄位網格 */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.625rem;
+            font-size: 12px;
+            color: #334155;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+            .metric-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 0.75rem;
+            }
+        }
+
+        .metric-grid-single {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.625rem;
+            font-size: 12px;
+            color: #334155;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+            .metric-grid-single {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0.75rem;
+            }
+        }
+
+        .metric-block {
+            background-color: #fff;
+            padding: 0.625rem 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+            box-sizing: border-box;
+        }
+
+        .metric-block-highlight {
+            background-color: #fff;
+            border-color: #ef4444;
+            border-width: 1.5px;
+        }
+
+        .m-lbl {
+            color: #64748b;
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .m-val {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        /* 顏色控制 */
+        .text-rose {
+            color: #dc2626;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .text-blue {
+            color: #1d4ed8;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .text-amber {
+            color: #b45309;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .text-teal {
+            color: #0f766e;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .text-slate {
+            color: #334155;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        /* 狀態橫幅 */
+        .empty-state {
+            background-color: #fff;
+            border-radius: 0.75rem;
+            border: 3px dashed #cbd5e1;
+            padding: 5rem 1.5rem;
+            text-center: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .empty-h {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 0.375rem;
+        }
+
+        .empty-p {
+            font-size: 0.9rem;
+            color: #475569;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .notice-row {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #78350f;
+            font-weight: 600;
+            background-color: #fef3c7;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #fde68a;
+        }
+
+        .zero-row {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #475569;
+            font-style: italic;
+            padding: 3rem;
+            font-weight: 500;
+        }
+
+        .success-banner {
+            font-size: 0.85rem;
+            color: #15803d;
+            font-weight: 700;
+            padding: 0.625rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding-left: 0.75rem;
+            border-radius: 0.375rem;
+        }
+    </style>
+
+    <script>
+        var CustomPapa = (function () {
+            var g = ",";
+            function parseString(e) {
+                var lines = e.split(/\r\n|\n|\r/);
+                var results = [];
+                if (lines.length === 0) return results;
+                var headers = lines[0].split(g);
+                for (var i = 1; i < lines.length; i++) {
+                    if (!lines[i]) continue;
+                    var cols = lines[i].split(g);
+                    if (cols.length === headers.length) {
+                        var obj = {};
+                        for (var j = 0; j < headers.length; j++) {
+                            obj[headers[j].trim()] = cols[j].trim();
+                        }
+                        results.push(obj);
+                    }
+                }
+                return results;
+            }
+            return {
+                parseFile: function (file, callback) {
+                    var reader = new FileReader();
+                    reader.onload = function (evt) {
+                        var data = parseString(evt.target.result);
+                        callback(data);
+                    };
+                    reader.readAsText(file, "UTF-8");
+                }
+            };
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="max-w-7xl">
+        <header>
+            <div>
+                <h1>晶片標準檔與點測結果比對工具 <span class="version-badge">V3.4.6 終極修正版</span></h1>
+                <p class="subtitle">100% 離線封裝。已修復規格表回歸、按鈕樣式優化，且強制臨界標籤不換行。</p>
+            </div>
+            <button id="resetAllBtn" class="btn-reset">
+                <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                    </path>
+                </svg>
+                🧹 完全重置工具
+            </button>
+        </header>
+
+        <div class="grid-layout">
+            <div class="space-y-6">
+                <div class="card">
+                    <h2 class="spec-title" style="color: #4f46e5;">
+                        <svg style="width:20px;height:20px;display:inline;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        檔案上傳區
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="upload-group">
+                            <div class="upload-header">
+                                <label class="label">1. 標準檔案 (LBT18-2) <span class="req">*必填</span></label>
+                                <button onclick="clearFileInput('stdFile', 'stdFileInfo')" class="clear-btn">❌
+                                    清空</button>
+                            </div>
+                            <div class="file-input-wrapper">
+                                <span class="file-input-custom" id="stdFileLabel">📂 點擊選擇標準檔案 CSV</span>
+                                <input type="file" id="stdFile" accept=".csv" class="file-input-real">
+                            </div>
+                            <span id="stdFileInfo" class="info-msg msg-std hidden"></span>
+                        </div>
+                        <div class="upload-group">
+                            <div class="upload-header">
+                                <label class="label">2. 第一天點測資料 (Day 1) <span class="req">*必填</span></label>
+                                <button onclick="clearFileInput('day1File', 'day1FileInfo')" class="clear-btn">❌
+                                    清空</button>
+                            </div>
+                            <div class="file-input-wrapper">
+                                <span class="file-input-custom" id="day1FileLabel"
+                                    style="color: #1d4ed8; border-color: #bfdbfe; background-color: #eff6ff;">📂 點擊選擇
+                                    Day 1 點測結果 CSV</span>
+                                <input type="file" id="day1File" accept=".csv" class="file-input-real">
+                            </div>
+                            <span id="day1FileInfo" class="info-msg msg-d1 hidden"></span>
+                        </div>
+                        <div class="upload-group">
+                            <div class="upload-header">
+                                <label class="label">3. 第二天點測資料 (Day 2) <span class="optional">(選填，無則略過)</span></label>
+                                <button onclick="clearFileInput('day2File', 'day2FileInfo')" class="clear-btn">❌
+                                    清空</button>
+                            </div>
+                            <div class="file-input-wrapper">
+                                <span class="file-input-custom" id="day2FileLabel"
+                                    style="color: #7e22ce; border-color: #e9d5ff; background-color: #fbf2ff;">📂 點擊選擇
+                                    Day 2 點測結果 CSV (選填)</span>
+                                <input type="file" id="day2File" accept=".csv" class="file-input-real">
+                            </div>
+                            <span id="day2FileInfo" class="info-msg msg-d2 hidden"></span>
+                        </div>
+                        <button id="compareBtn" class="btn-primary">
+                            執行自動模式比對
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="spec-title" style="color: #475569;">
+                        <svg style="width:20px;height:20px;display:inline;" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        測試項目標準值規格表
+                    </h2>
+                    <div style="overflow-x:auto;">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45%;">項目</th>
+                                    <th style="width: 55%;">標準範圍</th>
+                                </tr>
+                            </thead>
+                            <tbody id="specTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="stats-grid" id="statsDashboard" style="display: none;">
+                    <div class="stat-box">
+                        <p class="stat-title">點測總聯集顆數</p>
+                        <p class="stat-val val-total" id="statTotal">0</p>
+                    </div>
+                    <div class="stat-box">
+                        <p class="stat-title">成功比對標準檔</p>
+                        <p class="stat-val val-match" id="statMatched">0</p>
+                    </div>
+                    <div class="stat-box">
+                        <p class="stat-title" id="passLabel">雙日皆 PASS</p>
+                        <p class="stat-val val-pass" id="statPass">0</p>
+                    </div>
+                    <div class="stat-box">
+                        <p class="stat-title" id="failLabel">任一天 FAIL 顆數</p>
+                        <p class="stat-val val-fail" id="statFail">0</p>
+                    </div>
+                </div>
+
+                <div id="resultsCard" class="results-card" style="display: none;">
+                    <div class="results-header">
+                        <h3 id="tableTitle">詳細比對結果</h3>
+                        <div class="filter-group">
+                            <label for="filterStatus" class="label"
+                                style="font-size: 0.85rem; white-space: nowrap;">篩選條件：</label>
+                            <select id="filterStatus" class="filter-select">
+                                <option value="ALL">全部顯示 (含未對應晶片)</option>
+                                <option value="MATCHED_ALL">僅顯示標準檔有的 CHIP ID</option>
+                                <option value="PASS">僅顯示 PASS 晶粒</option>
+                                <option value="MARGINAL_PASS">⚠️ 僅顯示「接近臨界值(黃/橘燈)」的 PASS 晶粒</option>
+                                <option value="FAIL">僅顯示 FAIL 晶粒</option>
+                                <option value="NOT_FOUND">僅顯示未對應到標準檔</option>
+                                <option value="D1P_D2F">【雙日專用】第一天 PASS ➡️ 第二天 FAIL</option>
+                                <option value="D1F_D2P">【雙日專用】第一天 FAIL ➡️ 第二天 PASS</option>
+                                <option value="BOTH_PASS_MATCHED">【雙日專用】雙日全數完美 PASS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="main-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">Chip ID</th>
+                                    <th style="width: 25%;">綜合比對狀態</th>
+                                    <th style="width: 55%;">測試項目、差距與臨界分析明細</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="emptyState" class="empty-state">
+                    <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="empty-h">等待載入數據檔案</h3>
+                    <p class="empty-p">本機完全離線可用。請在左側選擇上傳「標準檔 + Day 1」或「標準檔 + Day 1 + Day 2」。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const specs = {
+            'ITH': { type: 'pm', value: 0.147 },
+            'DLDI': { type: 'pm', value: 0.00686 },
+            'LB_50': { type: 'pm', value: 0.098 },
+            'ASYML_3': { type: 'pm', value: 0.392 },
+            'RES': { type: 'pm', value: 0.686 },
+            'WL_DC': { type: 'pm', value: 0.196 },
+            'WL_PWR_DC': { type: 'range', min: -2.94, max: 9.8 },
+            'IREV2': { type: 'pm', value: 0.0147 },
+            'BRKDN_V': { type: 'pm', value: 0.735 },
+            'LARAT1PT0': { type: 'pm', value: 0.0147 },
+            'LARAT2PT4': { type: 'pm', value: 0.0098 },
+            'V_NOISE': { type: 'pm', value: 1.96 }
+        };
+
+        // 穩定渲染規格表
+        const specTableBody = document.getElementById('specTableBody');
+        Object.keys(specs).forEach(key => {
+            const spec = specs[key];
+            const row = document.createElement('tr');
+            let txt = spec.type === 'pm' ? `±${spec.value}` : `${spec.min} ~ ${spec.max}`;
+            row.innerHTML = `<td><strong>${key}</strong></td><td style="color: #64748b;">${txt}</td>`;
+            specTableBody.appendChild(row);
+        });
+
+        let globalStdData = null;
+        let globalDay1Data = null;
+        let globalDay2Data = null;
+        let fullComparisonResults = [];
+        let isDualDayMode = false;
+
+        // 監聽並同步顯示自訂按鈕的文字狀態
+        document.getElementById('stdFile').addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) { clearFileInput('stdFile', 'stdFileInfo'); return; }
+            document.getElementById('stdFileLabel').innerText = `📄 已選取：${file.name}`;
+            CustomPapa.parseFile(file, function (data) {
+                globalStdData = data;
+                var info = document.getElementById('stdFileInfo');
+                info.classList.remove('hidden');
+                info.className = "info-msg msg-std";
+                info.innerText = `已成功連結載入：共 ${data.length} 筆標準規格數據`;
+            });
+        });
+
+        document.getElementById('day1File').addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) { clearFileInput('day1File', 'day1FileInfo'); return; }
+            document.getElementById('day1FileLabel').innerText = `📄 已選取：${file.name}`;
+            CustomPapa.parseFile(file, function (data) {
+                globalDay1Data = data;
+                var info = document.getElementById('day1FileInfo');
+                info.classList.remove('hidden');
+                info.className = "info-msg msg-d1";
+                info.innerText = `已成功連結載入：共 ${data.length} 筆第一天點測數據`;
+            });
+        });
+
+        document.getElementById('day2File').addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) { clearFileInput('day2File', 'day2FileInfo'); return; }
+            document.getElementById('day2FileLabel').innerText = `📄 已選取：${file.name}`;
+            CustomPapa.parseFile(file, function (data) {
+                globalDay2Data = data;
+                var info = document.getElementById('day2FileInfo');
+                info.classList.remove('hidden');
+                info.className = "info-msg msg-d2";
+                info.innerText = `已成功連結載入：共 ${data.length} 筆第二天點測數據`;
+            });
+        });
+
+        function clearFileInput(id, infoId) {
+            document.getElementById(id).value = "";
+            const infoEl = document.getElementById(infoId);
+            infoEl.classList.add('hidden');
+            infoEl.innerText = "";
+            if (id === 'stdFile') { globalStdData = null; document.getElementById('stdFileLabel').innerText = "📂 點擊選擇標準檔案 CSV"; }
+            if (id === 'day1File') { globalDay1Data = null; document.getElementById('day1FileLabel').innerText = "📂 點擊選擇 Day 1 點測結果 CSV"; }
+            if (id === 'day2File') { globalDay2Data = null; document.getElementById('day2FileLabel').innerText = "📂 點擊選擇 Day 2 點測結果 CSV (選填)"; }
+        }
+
+        document.getElementById('resetAllBtn').addEventListener('click', function () {
+            clearFileInput('stdFile', 'stdFileInfo');
+            clearFileInput('day1File', 'day1FileInfo');
+            clearFileInput('day2File', 'day2FileInfo');
+            fullComparisonResults = [];
+            document.getElementById('statsDashboard').style.display = 'none';
+            document.getElementById('resultsCard').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'flex';
+            document.getElementById('filterStatus').value = 'ALL';
+        });
+
+        document.getElementById('filterStatus').addEventListener('change', function () {
+            if (fullComparisonResults.length > 0) renderResultsTable();
+        });
+
+        document.getElementById('compareBtn').addEventListener('click', function () {
+            if (!globalStdData || !globalDay1Data) {
+                alert('錯誤提示：請確認必填的「標準檔案」與「第一天點測資料 (Day 1)」皆已確實選取且成功載入！');
+                return;
+            }
+
+            isDualDayMode = globalDay2Data !== null && globalDay2Data.length > 0;
+            document.getElementById('passLabel').innerText = isDualDayMode ? "雙日皆 PASS" : "測試 PASS 顆數";
+            document.getElementById('failLabel').innerText = isDualDayMode ? "任一天 FAIL 顆數" : "測試 FAIL 顆數";
+            document.getElementById('tableTitle').innerText = isDualDayMode ? "雙日比對結果(含臨界分析)" : "單日點測比對結果(含臨界分析)";
+
+            const stdMap = {}, day1Map = {}, day2Map = {};
+            const allChipIds = new Set();
+
+            globalStdData.forEach(r => { if (r.CHIP_ID) stdMap[r.CHIP_ID.trim()] = r; });
+            globalDay1Data.forEach(r => { if (r.CHIP_ID) { const id = r.CHIP_ID.trim(); day1Map[id] = r; allChipIds.add(id); } });
+            if (isDualDayMode) { globalDay2Data.forEach(r => { if (r.CHIP_ID) { const id = r.CHIP_ID.trim(); day2Map[id] = r; allChipIds.add(id); } }); }
+
+            fullComparisonResults = [];
+            let matchedCount = 0, passCount = 0, failCount = 0;
+
+            allChipIds.forEach(chipId => {
+                const stdRow = stdMap[chipId];
+                const d1Row = day1Map[chipId];
+                const d2Row = day2Map[chipId];
+
+                if (!stdRow) {
+                    fullComparisonResults.push({ chipId, status: 'NOT_FOUND', itemsList: [], d1OverallPass: false, d2OverallPass: false, hasMarginal: false });
+                    return;
+                }
+
+                matchedCount++;
+                let overallStatus = 'PASS';
+                let itemsList = [];
+                let d1HasFailure = false, d2HasFailure = false;
+                let chipHasMarginal = false;
+
+                Object.keys(specs).forEach(item => {
+                    const spec = specs[item];
+                    const stdVal = parseFloat(stdRow[item]);
+                    const d1Val = d1Row && d1Row[item] !== undefined ? parseFloat(d1Row[item]) : NaN;
+                    const d2Val = isDualDayMode && d2Row && d2Row[item] !== undefined ? parseFloat(d2Row[item]) : NaN;
+
+                    if (isNaN(stdVal)) return;
+
+                    let d1Pass = true, d2Pass = true;
+                    let d1Diff = NaN, d2Diff = NaN;
+                    let d1Ratio = 0, d2Ratio = 0;
+                    let d1Out = 0, d2Out = 0;
+
+                    if (!isNaN(d1Val)) {
+                        d1Diff = d1Val - stdVal;
+                        if (spec.type === 'pm') {
+                            d1Ratio = (Math.abs(d1Diff) / spec.value) * 100;
+                            if (Math.abs(d1Diff) > spec.value) { d1Pass = false; d1Out = d1Diff > 0 ? d1Diff - spec.value : d1Diff + spec.value; }
+                        } else {
+                            const rangeMax = d1Diff > 0 ? spec.max : Math.abs(spec.min);
+                            d1Ratio = (Math.abs(d1Diff) / rangeMax) * 100;
+                            if (d1Diff < spec.min || d1Diff > spec.max) { d1Pass = false; d1Out = d1Diff > spec.max ? d1Diff - spec.max : d1Diff - spec.min; }
+                        }
+                    } else { d1Pass = false; }
+                    if (!d1Pass) d1HasFailure = true;
+
+                    if (isDualDayMode) {
+                        if (!isNaN(d2Val)) {
+                            d2Diff = d2Val - stdVal;
+                            if (spec.type === 'pm') {
+                                d2Ratio = (Math.abs(d2Diff) / spec.value) * 100;
+                                if (Math.abs(d2Diff) > spec.value) { d2Pass = false; d2Out = d2Diff > 0 ? d2Diff - spec.value : d2Diff + spec.value; }
+                            } else {
+                                const rangeMax = d2Diff > 0 ? spec.max : Math.abs(spec.min);
+                                d2Ratio = (Math.abs(d2Diff) / rangeMax) * 100;
+                                if (d2Diff < spec.min || d2Diff > spec.max) { d2Pass = false; d2Out = d2Diff > spec.max ? d2Diff - spec.max : d2Diff - spec.min; }
+                            }
+                        } else { d2Pass = false; }
+                        if (!d2Pass) d2HasFailure = true;
+                    }
+
+                    let isItemMarginal = false;
+                    if ((d1Pass && d1Ratio >= 70) || (isDualDayMode && d2Pass && d2Ratio >= 70)) {
+                        isItemMarginal = true;
+                        chipHasMarginal = true;
+                    }
+
+                    if (!d1Pass || (isDualDayMode && !d2Pass)) overallStatus = 'FAIL';
+
+                    itemsList.push({
+                        item, stdVal, d1Val, d2Val, d1Diff, d2Diff, d1Pass, d2Pass, d1Ratio, d2Ratio, d1Out, d2Out, isItemMarginal,
+                        dayShift: (isDualDayMode && !isNaN(d2Val) && !isNaN(d1Val)) ? (d2Val - d1Val) : NaN,
+                        specText: spec.type === 'pm' ? `±${spec.value}` : `${spec.min} ~ ${spec.max}`
+                    });
+                });
+
+                if (overallStatus === 'PASS') passCount++;
+                if (overallStatus === 'FAIL') failCount++;
+
+                fullComparisonResults.push({
+                    chipId, status: overallStatus, itemsList,
+                    d1OverallPass: !d1HasFailure,
+                    d2OverallPass: isDualDayMode ? !d2HasFailure : false,
+                    hasMarginal: chipHasMarginal
+                });
+            });
+
+            document.getElementById('statTotal').innerText = allChipIds.size;
+            document.getElementById('statMatched').innerText = matchedCount;
+            document.getElementById('statPass').innerText = passCount;
+            document.getElementById('statFail').innerText = failCount;
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsDashboard').style.display = 'grid';
+            document.getElementById('resultsCard').style.display = 'block';
+
+            renderResultsTable();
+        });
+
+        function renderResultsTable() {
+            const filterValue = document.getElementById('filterStatus').value;
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            fullComparisonResults.forEach(res => {
+                if (filterValue === 'MATCHED_ALL' && res.status === 'NOT_FOUND') return;
+                if (filterValue === 'PASS' && res.status !== 'PASS') return;
+                if (filterValue === 'FAIL' && res.status !== 'FAIL') return;
+                if (filterValue === 'NOT_FOUND' && res.status !== 'NOT_FOUND') return;
+                if (filterValue === 'MARGINAL_PASS' && !(res.status === 'PASS' && res.hasMarginal === true)) return;
+                if (filterValue === 'D1P_D2F' && (!isDualDayMode || res.status === 'NOT_FOUND' || !(res.d1OverallPass && !res.d2OverallPass))) return;
+                if (filterValue === 'D1F_D2P' && (!isDualDayMode || res.status === 'NOT_FOUND' || !(!res.d1OverallPass && res.d2OverallPass))) return;
+                if (filterValue === 'BOTH_PASS_MATCHED' && (res.status === 'NOT_FOUND' || !isDualDayMode || res.status !== 'PASS')) return;
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-200';
+
+                let statusBadge = '';
+                if (res.status === 'PASS') {
+                    if (res.hasMarginal) {
+                        statusBadge = '<span class="badge badge-warn">PASS (接近臨界)</span><span class="badge-sub">⚠️ 黃/橘預警</span>';
+                    } else {
+                        statusBadge = `<span class="badge badge-pass">${isDualDayMode ? '雙日安全 PASS' : '安全 PASS'}</span>`;
+                    }
+                } else if (res.status === 'FAIL') {
+                    let trackingTxt = "項目 FAIL";
+                    if (isDualDayMode) {
+                        if (res.d1OverallPass && !res.d2OverallPass) trackingTxt = "D1 通過 ➔ D2 失效";
+                        if (!res.d1OverallPass && res.d2OverallPass) trackingTxt = "D1 失效 ➔ D2 好轉";
+                    }
+                    statusBadge = `<span class="badge badge-fail">FAIL</span><span class="badge-sub">${trackingTxt}</span>`;
+                } else {
+                    statusBadge = '<span class="badge badge-null">未對應標準檔</span>';
+                }
+
+                let detailsHTML = `<div class="inner-cards-container">`;
+
+                if (res.status === 'NOT_FOUND') {
+                    detailsHTML = '<span class="text-xs text-slate-400 italic py-2 block">此晶片不存在於 LBT18-2 標準檔案中</span>';
+                } else {
+                    res.itemsList.forEach(d => {
+                        let cardBg = "inner-card";
+                        let pillHTML = "";
+                        let showCard = false;
+
+                        if (!d.d1Pass || (isDualDayMode && !d.d2Pass)) {
+                            cardBg = "inner-card card-fail";
+                            pillHTML = `<span class="pill-text pill-fail">❌ 超出規格界限</span>`;
+                            showCard = true;
+                        } else if (d.isItemMarginal) {
+                            const maxRatio = Math.max(d.d1Ratio, isDualDayMode ? d.d2Ratio : 0);
+                            if (maxRatio >= 85) {
+                                cardBg = "inner-card card-orange";
+                                pillHTML = `<span class="pill-text pill-orange">🟠 極度接近臨界 (${maxRatio.toFixed(1)}%)</span>`;
+                            } else {
+                                cardBg = "inner-card card-amber";
+                                pillHTML = `<span class="pill-text pill-amber">🟡 接近臨界邊緣 (${maxRatio.toFixed(1)}%)</span>`;
+                            }
+                            showCard = true;
+                        }
+
+                        if (filterValue === 'ALL' || filterValue === 'MATCHED_ALL') {
+                            if (!d.d1Pass || (isDualDayMode && !d.d2Pass) || d.isItemMarginal) showCard = true;
+                        }
+
+                        if (!showCard) return;
+
+                        const diffSign1 = d.d1Diff > 0 ? '+' : '';
+                        const diffSign2 = d.d2Diff > 0 ? '+' : '';
+
+                        if (isDualDayMode) {
+                            const shiftSign = d.dayShift > 0 ? '+' : '';
+                            const shiftColor = d.dayShift > 0 ? 'text-amber' : (d.dayShift < 0 ? 'text-teal' : 'text-slate');
+
+                            detailsHTML += `
+                                <div class="${cardBg}">
+                                    <div class="inner-card-header">
+                                        <span class="item-label">${d.item}</span>
+                                        ${pillHTML}
+                                    </div>
+                                    <div class="metric-grid">
+                                        <div class="metric-block"><span class="m-lbl">規格門檻/基準值</span><span class="m-val" style="color:#475569;">${d.specText}</span><span class="m-lbl" style="font-size:11px; margin-top: 2px;">標準: ${d.stdVal.toFixed(4)}</span></div>
+                                        <div class="metric-block ${d.d1Pass ? '' : 'metric-block-highlight'}"><span class="m-lbl">Day 1 點測數據</span><span class="m-val ${d.d1Pass ? '' : 'text-rose'}">${d.d1Val.toFixed(4)}</span><span class="m-lbl" style="font-size:11px; margin-top:2px;">差: ${diffSign1}${d.d1Diff.toFixed(4)} <strong class="${d.d1Ratio >= 70 ? 'text-amber' : ''}">(${d.d1Ratio.toFixed(0)}%)</strong></span></div>
+                                        <div class="metric-block ${d.d2Pass ? '' : 'metric-block-highlight'}"><span class="m-lbl">Day 2 點測數據</span><span class="m-val ${d.d2Pass ? '' : 'text-rose'}">${isNaN(d.d2Val) ? '-' : d.d2Val.toFixed(4)}</span><span class="m-lbl" style="font-size:11px; margin-top:2px;">差: ${diffSign2}${isNaN(d.d2Diff) ? '-' : d.d2Diff.toFixed(4)} <strong class="${d.d2Ratio >= 70 ? 'text-amber' : ''}">(${isNaN(d.d2Ratio) ? '-' : d.d2Ratio.toFixed(0)}%)</strong></span></div>
+                                        <div class="metric-block" style="background-color:#fff; border-color: #cbd5e1;"><span class="m-lbl">🔄 雙日測值推移變異</span><span class="m-val ${shiftColor}">${isNaN(d.dayShift) ? '-' : `${shiftSign}${d.dayShift.toFixed(4)}`}</span></div>
+                                    </div>
+                                </div>`;
+                        } else {
+                            detailsHTML += `
+                                <div class="${cardBg}">
+                                    <div class="inner-card-header">
+                                        <span class="item-label">${d.item}</span>
+                                        ${pillHTML}
+                                    </div>
+                                    <div class="metric-grid-single">
+                                        <div class="metric-block"><span class="m-lbl">今日點測數值</span><span class="m-val">${d.d1Val.toFixed(4)}</span></div>
+                                        <div class="metric-block"><span class="m-lbl">標準基準數值</span><span class="m-val" style="color:#475569;">${d.stdVal.toFixed(4)}</span></div>
+                                        <div class="metric-block"><span class="m-lbl">與標準落差值</span><span class="m-val text-rose">${diffSign1}${d.d1Diff.toFixed(4)}</span></div>
+                                        <div class="metric-block"><span class="m-lbl">允許規格範圍 (規格佔用率)</span><span class="m-val text-slate">${d.specText} <strong class="${d.d1Ratio >= 70 ? 'text-amber' : ''}">(${d.d1Ratio.toFixed(1)}%)</strong></span></div>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+
+                    if (detailsHTML === `<div class="inner-cards-container">` && res.status === 'PASS') {
+                        detailsHTML = '<span class="success-banner"><svg style="width:1.2rem;height:1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> 晶粒健康度良好：該顆晶片所有測試項目均遠離臨界界限 (&lt;70%)</span>';
+                    } else {
+                        detailsHTML += `</div>`;
+                    }
+                }
+
+                if ((filterValue === 'D1P_D2F' || filterValue === 'D1F_D2P' || filterValue === 'BOTH_PASS_MATCHED') && !isDualDayMode) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="notice-row">ℹ️ 您選取了雙日專用篩選條件，請載入「Day 2」檔案以啟用交叉分析。</td></tr>`;
+                    return;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap"><span class="chip-id-text">${res.chipId}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-3">${detailsHTML}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (tbody.innerHTML === '') {
+                tbody.innerHTML = `<tr><td colspan="3" class="zero-row">符合此篩選條件的晶片數量為 0 顆</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
