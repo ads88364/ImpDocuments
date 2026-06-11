@@ -192,6 +192,7 @@
                 const groupMap = {};
                 const files = Array.from(e.target.files);
 
+
                 // 傳統點擊上傳的快速過濾：在記憶體中直接切字串，不碰不必要的檔案
                 files.forEach(f => {
                     const path = f.webkitRelativePath;
@@ -219,6 +220,7 @@
             if (handle.kind === 'directory') {
                 // 關鍵：如果當前資料夾叫 ChipData，撈完它的子目錄名稱後就「直接回傳」，絕不往下讀取裡面的細部檔案！
                 if (handle.name === 'ChipData' && parentName !== "") {
+                    console.log(parentName, "6666666")
                     for await (const entry of handle.values()) {
                         if (entry.kind === 'directory') {
                             const id = entry.name.split('_')[3];
