@@ -92,6 +92,7 @@
       font-weight: 600;
       transition: 0.2s;
       text-align: center;
+      white-space: nowrap; /* 確保三個按鈕內的文字絕不換行 */
     }
 
     .mode-btn.active[data-mode="RL"] {
@@ -196,7 +197,7 @@
     <div class="mode-switch">
       <div id="modeRL" class="mode-btn active" data-mode="RL" onclick="setMode('RL')">標準模式 (RL: 偶升奇降)</div>
       <div id="modeVL" class="mode-btn" data-mode="VL" onclick="setMode('VL')">反轉模式 (VL: 偶降奇升)</div>
-      <div id="modeCM" class="mode-btn" data-mode="CM" onclick="setMode('CM')">CM 模式 (偶降奇升-前兩碼合併)</div>
+      <div id="modeCM" class="mode-btn" data-mode="CM" onclick="setMode('CM')">CM 模式 (偶降奇升-前兩碼相加)</div>
     </div>
 
     <div class="form-row">
@@ -324,11 +325,13 @@
      */
     function checkIsDesc(prefix, base, modeName) {
       if (modeName === 'CM' || currentMode === 'CM') {
-        // 【CM 新規則】前兩碼轉十進位，偶數固定降冪 (DESC)
-        const prefixVal = fromBase(prefix, base);
-        return (prefixVal % 2 === 0); 
+        // 【CM 新規則】前兩碼拆開，各自轉十進位後相加。偶數固定降冪 (DESC)，奇數升冪 (ASC)
+        const char1Val = BASE_MAP[base].indexOf(prefix[0]);
+        const char2Val = BASE_MAP[base].indexOf(prefix[1]);
+        const combinedVal = char1Val + char2Val;
+        return (combinedVal % 2 === 0); 
       } else {
-        // 【舊型號規則】單看第二位字元的奇偶數
+        // 【舊型號規則】單看第二位字元的奇偶數（RL/VL）- 完全未被更動，不影響舊功能
         const secondChar = prefix.substring(1, 2);
         const index = BASE_MAP[36].indexOf(secondChar);
         const isEven = (index % 2 === 0);
