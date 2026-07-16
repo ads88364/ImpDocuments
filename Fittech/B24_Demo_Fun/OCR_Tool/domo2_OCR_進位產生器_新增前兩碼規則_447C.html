@@ -3,14 +3,17 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>進位區段產生器 - RL/VL 雙模式版</title>
+  <title>進位區段產生器 - RL/VL/CM 三模式版</title>
 
   <style>
     /* 簡約風格定義 */
     :root {
       --primary-color: #222;
       --accent-color: #007AFF;
-      --vl-color: #E91E63; /* VL 模式使用桃紅色區別 */
+      --vl-color: #E91E63;
+      /* VL 模式使用桃紅色區別 */
+      --cm-color: #2ec4b6;
+      /* CM 模式使用翠綠色區別 */
       --bg-color: #f8f9fa;
       --border-color: #e0e0e0;
     }
@@ -60,13 +63,16 @@
       border: 1px solid transparent;
     }
 
-    .preset-badge:hover { background: #e0e0e0; }
+    .preset-badge:hover {
+      background: #e0e0e0;
+    }
+
     .preset-badge.active {
       background: var(--primary-color);
       color: #fff;
     }
 
-    /* 模式切換區域 (RL / VL) */
+    /* 模式切換區域 (RL / VL / CM) */
     .mode-switch {
       display: flex;
       justify-content: center;
@@ -102,6 +108,12 @@
       border-color: var(--vl-color);
     }
 
+    .mode-btn.active[data-mode="CM"] {
+      background: var(--cm-color);
+      color: #fff;
+      border-color: var(--cm-color);
+    }
+
     .form-row {
       display: grid;
       grid-template-columns: 120px 1fr;
@@ -109,9 +121,14 @@
       margin-bottom: 16px;
     }
 
-    label { font-size: 13px; color: #888; font-weight: 500; }
+    label {
+      font-size: 13px;
+      color: #888;
+      font-weight: 500;
+    }
 
-    input, select {
+    input,
+    select {
       width: 100%;
       padding: 10px;
       border-radius: 8px;
@@ -173,7 +190,7 @@
       <div class="preset-badge" onclick="applyPreset(this, '283VCL', 'VL', 16, 39, 3, 5)">283VCL (VL)</div>
       <div class="preset-badge" onclick="applyPreset(this, '483VCL', 'VL', 36, 39, 3, 8)">483VCL (VL)</div>
       <div class="preset-badge" onclick="applyPreset(this, '247C', 'VL', 16, 32, 2, 5)">247C (VL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '447C', 'VL', 36, 32, 2, 8)">447C(暫時) (VL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '447CM', 'CM', 36, 32, 2, 8)">447CM (CM)</div>
       <div class="preset-badge" onclick="applyPreset(this, '483QT', 'RL', 16, 32, 2, 7)">483QT (RL)</div>
       <div class="preset-badge" onclick="applyPreset(this, '483QL', 'RL', 36, 39, 3, 8)">483QL (RL)</div>
     </div>
@@ -181,6 +198,7 @@
     <div class="mode-switch">
       <div id="modeRL" class="mode-btn active" data-mode="RL" onclick="setMode('RL')">標準模式 (RL: 偶升奇降)</div>
       <div id="modeVL" class="mode-btn" data-mode="VL" onclick="setMode('VL')">反轉模式 (VL: 偶降奇升)</div>
+      <div id="modeCM" class="mode-btn" data-mode="CM" onclick="setMode('CM')">CM 模式 (偶降奇升-前兩碼合併)</div>
     </div>
 
     <div class="form-row">
@@ -217,9 +235,9 @@
     </div>
 
     <button class="main-btn" onclick="generate()">產生資料</button>
-    
+
     <div id="selectedStatus" class="status-bar">尚未選取型號</div>
-    
+
     <button class="main-btn btn-download" onclick="downloadCSV()">下載 CSV</button>
 
     <textarea id="output" readonly></textarea>
@@ -242,13 +260,16 @@
     initDropdowns();
 
     /**
-     * 切換模式 (RL 或 VL)
+     * 切換模式 (RL、VL 或 CM)
      */
     function setMode(mode) {
       currentMode = mode;
       document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+
       if (mode === 'RL') document.getElementById('modeRL').classList.add('active');
-      else document.getElementById('modeVL').classList.add('active');
+      else if (mode === 'VL') document.getElementById('modeVL').classList.add('active');
+      else if (mode === 'CM') document.getElementById('modeCM').classList.add('active');
+
       updateStatusDisplay();
     }
 
@@ -256,12 +277,18 @@
      * 更新狀態文字顯示
      */
     function updateStatusDisplay(modelName = "") {
-      const modeText = currentMode === 'RL' ? "標準(RL)" : "反轉(VL)";
+      let modeText = "標準(RL)";
+      if (currentMode === 'VL') modeText = "反轉(VL)";
+      if (currentMode === 'CM') modeText = "CM新規則";
+
       const currentModel = modelName || document.getElementById("selectedStatus").innerText.split('：')[1] || "未選取";
       document.getElementById("selectedStatus").innerText = `目前型號：${currentModel} | 規律：${modeText}`;
-      
+
       // 根據模式改變文字顏色
-      document.getElementById("selectedStatus").style.color = (currentMode === 'VL') ? 'var(--vl-color)' : 'var(--accent-color)';
+      let statusColor = 'var(--accent-color)';
+      if (currentMode === 'VL') statusColor = 'var(--vl-color)';
+      if (currentMode === 'CM') statusColor = 'var(--cm-color)';
+      document.getElementById("selectedStatus").style.color = statusColor;
     }
 
     /**
@@ -307,18 +334,37 @@
 
     /**
      * 核心邏輯：判斷升降冪
-     * RL 模式：偶數升、奇數降
-     * VL 模式：偶數降、奇數升 (剛好相反)
+     * - CM 新型號（如 447CM）：適用新規則（前兩碼合併轉為十進位，偶降奇升）
+     * - 舊型號 VL 模式（如 447C, 247C 等）：適用舊規則反轉（單看第二位字元，偶降奇升）
+     * - 舊型號 RL 模式（如 283QT, 283QL 等）：適用舊規則標準（單看第二位字元，偶升奇降）
      */
     function getSequenceMode(prefix) {
-      const secondChar = prefix.substring(1, 2);
-      const index = BASE_MAP[36].indexOf(secondChar);
-      const isEven = (index % 2 === 0);
+      const base = parseInt(document.getElementById("baseSelect").value);
 
-      if (currentMode === 'RL') {
-        return isEven ? "ASC" : "DESC"; // RL: 偶升奇降
+      // 取得目前選取的型號名稱（從狀態列取得）
+      const statusBarText = document.getElementById("selectedStatus").innerText;
+      const modelMatch = statusBarText.match(/目前型號：([^|]+)/);
+      const modelName = modelMatch ? modelMatch[1].trim() : "";
+
+      // 檢查是否為 CM 新型號或當前切換到 CM 模式
+      const isCMModel = modelName.includes("CM") || currentMode === 'CM';
+
+      if (isCMModel) {
+        // 【CM 新規則】前兩碼合併轉為十進位
+        const prefixVal = fromBase(prefix, base);
+        const isEven = (prefixVal % 2 === 0);
+        return isEven ? "DESC" : "ASC"; // 偶降、奇升
       } else {
-        return isEven ? "DESC" : "ASC"; // VL: 偶降奇升
+        // 【舊版規則】只看第二位字元
+        const secondChar = prefix.substring(1, 2);
+        const index = BASE_MAP[36].indexOf(secondChar);
+        const isEven = (index % 2 === 0);
+
+        if (currentMode === 'VL') {
+          return isEven ? "DESC" : "ASC"; // 舊 VL：偶降、奇升
+        } else {
+          return isEven ? "ASC" : "DESC"; // 舊 RL：偶升、奇降
+        }
       }
     }
 
@@ -348,7 +394,7 @@
 
       for (let p = startP; p <= endP; p++) {
         let prefix = toBase(p, base, 2);
-        let mode = getSequenceMode(prefix); 
+        let mode = getSequenceMode(prefix);
         let startValue = fromBase(prefix + "00", base);
 
         for (let g = 0; g < blockCount; g++) {
