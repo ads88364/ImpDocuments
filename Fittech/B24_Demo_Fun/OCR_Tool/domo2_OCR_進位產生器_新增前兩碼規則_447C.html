@@ -320,19 +320,19 @@
     }
 
     /**
-     * 核心邏輯修正：判定升降冪
+     * 核心邏輯修正：動態傳入 prefix 的奇偶判定
      */
     function checkIsDesc(prefix, base, modeName) {
       if (modeName === 'CM' || currentMode === 'CM') {
-        // 【CM 新規則 - 反轉】前兩碼轉十進位，奇數固定降冪 (DESC)，偶數則為升冪 (ASC)
+        // 【CM 新規則】前兩碼轉十進位，偶數固定降冪 (DESC)
         const prefixVal = fromBase(prefix, base);
-        return (prefixVal % 2 !== 0);
+        return (prefixVal % 2 === 0); 
       } else {
         // 【舊型號規則】單看第二位字元的奇偶數
         const secondChar = prefix.substring(1, 2);
         const index = BASE_MAP[36].indexOf(secondChar);
         const isEven = (index % 2 === 0);
-        return (currentMode === 'VL') ? isEven : !isEven;
+        return (currentMode === 'VL') ? isEven : !isEven; 
       }
     }
 
@@ -373,7 +373,7 @@
         // 依據區段數量產出每一條 Bar 
         for (let g = 0; g < blockCount; g++) {
           let chipIDs = [];
-
+          
           // 先用暫時產出的第一個 Chip ID 抓出物理上它真正的 OCR 前兩碼
           let sampleId = toBase(startValue, base, 4);
           let realPrefix = sampleId.substring(0, 2);
