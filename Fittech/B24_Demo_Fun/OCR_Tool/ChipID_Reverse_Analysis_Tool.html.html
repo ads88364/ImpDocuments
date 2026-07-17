@@ -1,422 +1,2811 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 
 <head>
-  <meta charset="UTF-8" />
-  <title>進位區段產生器 - RL/VL/CM 三模式版</title>
+
+  <meta charset="UTF-8">
+
+  <title>
+    ChipID Reverse Analysis Tool V2
+  </title>
+
 
   <style>
-    /* 簡約風格定義 */
-    :root {
-      --primary-color: #222;
-      --accent-color: #007AFF;
-      --vl-color: #E91E63;
-      --cm-color: #2ec4b6;
-      --bg-color: #f8f9fa;
-      --border-color: #e0e0e0;
+    * {
+      box-sizing: border-box;
+      font-family:
+        "Segoe UI",
+        "Microsoft JhengHei",
+        Arial;
     }
+
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg-color);
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
+
+      margin: 0;
+      background: #f3f3f3;
+      color: #222;
+
     }
+
+
+
+    .header {
+
+      background: #111;
+      color: white;
+
+      padding: 25px 35px;
+
+    }
+
+
+    .header h1 {
+
+      margin: 0;
+
+      font-size: 28px;
+
+    }
+
+
+    .header p {
+
+      margin-top: 8px;
+
+      color: #bbb;
+
+    }
+
+
+
 
     .container {
-      width: 100%;
-      max-width: 600px;
-      background: #fff;
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      border: 1px solid var(--border-color);
+
+      padding: 25px;
+
     }
 
-    h2 {
-      text-align: center;
-      margin-bottom: 24px;
-      font-weight: 600;
-      color: var(--primary-color);
-    }
 
-    /* 型號標籤區域 */
-    .preset-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
 
-    .preset-badge {
-      padding: 8px 16px;
-      background: #eee;
-      border-radius: 20px;
-      font-size: 12px;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: 1px solid transparent;
-    }
 
-    .preset-badge:hover {
-      background: #e0e0e0;
-    }
 
-    .preset-badge.active {
-      background: var(--primary-color);
-      color: #fff;
-    }
+    .card {
 
-    /* 模式切換區域 (RL / VL / CM) */
-    .mode-switch {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 24px;
-      padding: 10px;
-      background: #f1f1f1;
+      background: white;
+
       border-radius: 12px;
+
+      padding: 20px;
+
+      margin-bottom: 20px;
+
+      box-shadow:
+        0 2px 10px rgba(0, 0, 0, .08);
+
     }
 
-    .mode-btn {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #ccc;
-      background: #fff;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: 0.2s;
-      text-align: center;
+
+
+
+    .title {
+
+      font-size: 20px;
+
+      font-weight: bold;
+
+      margin-bottom: 15px;
+
     }
 
-    .mode-btn.active[data-mode="RL"] {
-      background: var(--accent-color);
-      color: #fff;
-      border-color: var(--accent-color);
-    }
 
-    .mode-btn.active[data-mode="VL"] {
-      background: var(--vl-color);
-      color: #fff;
-      border-color: var(--vl-color);
-    }
 
-    .mode-btn.active[data-mode="CM"] {
-      background: var(--cm-color);
-      color: #fff;
-      border-color: var(--cm-color);
-    }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 120px 1fr;
+
+
+
+    /* Upload Area */
+
+
+    .drop-zone {
+
+      height: 170px;
+
+      border:
+
+        2px dashed #777;
+
+      border-radius: 12px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      justify-content: center;
+
       align-items: center;
-      margin-bottom: 16px;
-    }
 
-    label {
-      font-size: 13px;
-      color: #888;
-      font-weight: 500;
-    }
 
-    input,
-    select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      font-size: 14px;
-    }
-
-    .status-bar {
-      text-align: center;
-      font-size: 13px;
-      margin-top: 12px;
-      height: 20px;
-      font-weight: 500;
-    }
-
-    button.main-btn {
-      margin-top: 10px;
-      padding: 14px;
-      width: 100%;
-      border: none;
-      background: var(--primary-color);
-      color: white;
-      border-radius: 8px;
-      font-weight: 600;
       cursor: pointer;
+
+      user-select: none;
+
+
+      transition: .2s;
+
     }
 
-    .btn-download {
-      background: #fff;
-      color: var(--primary-color);
-      border: 1px solid var(--primary-color);
-      margin-top: 8px;
-    }
 
-    textarea {
-      width: 100%;
-      height: 180px;
-      margin-top: 20px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      font-family: monospace;
-      font-size: 12px;
+
+    .drop-zone:hover {
+
       background: #fafafa;
-      box-sizing: border-box;
+
+    }
+
+
+
+    .drop-zone.dragover {
+
+      background: #eee;
+
+      border-color: #000;
+
+    }
+
+
+
+    .drop-zone span {
+
+      color: #555;
+
+      margin: 5px;
+
+    }
+
+
+
+
+
+
+
+    button {
+
+
+      margin-top: 15px;
+
+      padding:
+
+        10px 25px;
+
+
+      border: 0;
+
+      border-radius: 6px;
+
+
+      background: #111;
+
+      color: white;
+
+
+      cursor: pointer;
+
+
+    }
+
+
+
+    button:hover {
+
+      background: #333;
+
+    }
+
+
+
+
+
+
+    .file-info {
+
+      margin-top: 15px;
+
+      color: #555;
+
+    }
+
+
+
+
+
+
+
+
+
+    /* Summary */
+
+
+    .summary-grid {
+
+
+      display: grid;
+
+
+      grid-template-columns:
+
+        repeat(auto-fit, minmax(180px, 1fr));
+
+
+      gap: 15px;
+
+    }
+
+
+
+    .summary-box {
+
+
+      background: #f8f8f8;
+
+      padding: 15px;
+
+      border-radius: 10px;
+
+      text-align: center;
+
+
+    }
+
+
+
+    .summary-label {
+
+      color: #666;
+
+    }
+
+
+
+    .summary-value {
+
+      margin-top: 8px;
+
+      font-size: 30px;
+
+      font-weight: bold;
+
+    }
+
+
+
+
+
+
+
+
+    /* Table */
+
+
+    .table-box {
+
+      overflow: auto;
+
+    }
+
+
+
+    table {
+
+      width: 100%;
+
+      border-collapse: collapse;
+
+    }
+
+
+
+    th {
+
+      background: #222;
+
+      color: white;
+
+      padding: 10px;
+
+    }
+
+
+
+    td {
+
+      padding: 10px;
+
+      border-bottom:
+
+        1px solid #ddd;
+
+      text-align: center;
+
+    }
+
+
+
+
+
+    .good {
+
+      background: #e8ffe8;
+
+      color: #006600;
+
+    }
+
+
+
+    .bad {
+
+      background: #ffe3e3;
+
+      color: #a00000;
+
+    }
+
+
+
+
+
+
+    .tag {
+
+
+      display: inline-block;
+
+
+      background: #eee;
+
+
+      padding:
+
+        4px 10px;
+
+
+      border-radius: 20px;
+
+
+      margin: 3px;
+
+
+    }
+
+
+
+
+
+
+
+    pre {
+
+
+      background: #111;
+
+      color: #eee;
+
+      padding: 15px;
+
+      border-radius: 8px;
+
+      overflow: auto;
+
+    }
+
+
+
+
+
+
+
+    .hidden {
+
+      display: none;
+
+    }
+
+
+
+
+
+
+
+    .footer {
+
+
+      text-align: center;
+
+      color: #777;
+
+      padding: 20px;
+
+
     }
   </style>
+
+
 </head>
+
+
+
+
+
 
 <body>
 
-  <div class="container">
 
-    <h2>進位區段產生器</h2>
 
-    <div class="preset-container">
-      <div class="preset-badge" onclick="applyPreset(this, '283QT', 'RL', 16, 32, 2, 5)">283QT (RL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '283QL', 'RL', 16, 39, 3, 5)">283QL (RL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '283VCL', 'VL', 16, 39, 3, 5)">283VCL (VL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '483VCL', 'VL', 36, 39, 3, 8)">483VCL (VL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '247C', 'VL', 16, 32, 2, 5)">247C (VL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '447CM', 'CM', 36, 32, 2, 8)">447CM (CM)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '447CM', 'RL', 36, 32, 2, 8)">447CM-測試 (CM)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '483QT', 'RL', 16, 32, 2, 7)">483QT (RL)</div>
-      <div class="preset-badge" onclick="applyPreset(this, '483QL', 'RL', 36, 39, 3, 8)">483QL (RL)</div>
-    </div>
+  <div class="header">
 
-    <div class="mode-switch">
-      <div id="modeRL" class="mode-btn active" data-mode="RL" onclick="setMode('RL')">標準模式 (RL: 偶升奇降)</div>
-      <div id="modeVL" class="mode-btn" data-mode="VL" onclick="setMode('VL')">反轉模式 (VL: 偶降奇升)</div>
-      <div id="modeCM" class="mode-btn" data-mode="CM" onclick="setMode('CM')">CM 模式 (偶降奇升-前兩碼相加)</div>
-    </div>
 
-    <div class="form-row">
-      <label>進位</label>
-      <select id="baseSelect">
-        <option value="16">16進位</option>
-        <option value="36">36進位</option>
-      </select>
-    </div>
+    <h1>
+      ChipID Reverse Analysis Tool V2
+    </h1>
 
-    <div class="form-row">
-      <label>前兩碼起始</label>
-      <input id="prefixStart" placeholder="例如: 1E">
-    </div>
 
-    <div class="form-row">
-      <label>前兩碼結束</label>
-      <input id="prefixEnd" placeholder="例如: 2H">
-    </div>
+    <p>
+      LotFile.csv Reverse Engineering / ChipID Rule Detection / Wafer Mapping
+    </p>
 
-    <div class="form-row">
-      <label>每列數量</label>
-      <input id="blockSize" type="number">
-    </div>
-
-    <div class="form-row">
-      <label>區段數量 (組數)</label>
-      <select id="blockCountSelect"></select>
-    </div>
-
-    <div class="form-row">
-      <label>間隔 gap</label>
-      <select id="gapSelect"></select>
-    </div>
-
-    <button class="main-btn" onclick="generate()">產生資料</button>
-
-    <div id="selectedStatus" class="status-bar">尚未選取型號</div>
-
-    <button class="main-btn btn-download" onclick="downloadCSV()">下載 CSV</button>
-
-    <textarea id="output" readonly></textarea>
 
   </div>
 
-  <script>
-    let currentMode = 'RL';
 
-    const GAP_OPTIONS = [2, 3];
-    const BLOCK_COUNT_OPTIONS = [5, 7, 8];
 
-    function initDropdowns() {
-      const gapSelect = document.getElementById("gapSelect");
-      const blockSelect = document.getElementById("blockCountSelect");
-      GAP_OPTIONS.forEach(v => gapSelect.add(new Option(v, v)));
-      BLOCK_COUNT_OPTIONS.forEach(v => blockSelect.add(new Option(v, v)));
-    }
-    initDropdowns();
 
-    function setMode(mode) {
-      currentMode = mode;
-      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
 
-      if (mode === 'RL') document.getElementById('modeRL').classList.add('active');
-      else if (mode === 'VL') document.getElementById('modeVL').classList.add('active');
-      else if (mode === 'CM') document.getElementById('modeCM').classList.add('active');
 
-      updateStatusDisplay();
-    }
 
-    function updateStatusDisplay(modelName = "") {
-      let modeText = "標準(RL)";
-      if (currentMode === 'VL') modeText = "反轉(VL)";
-      if (currentMode === 'CM') modeText = "CM新規則";
 
-      const currentModel = modelName || document.getElementById("selectedStatus").innerText.split('：')[1] || "未選取";
-      document.getElementById("selectedStatus").innerText = `目前型號：${currentModel} | 規律：${modeText}`;
+  <div class="container">
 
-      let statusColor = 'var(--accent-color)';
-      if (currentMode === 'VL') statusColor = 'var(--vl-color)';
-      if (currentMode === 'CM') statusColor = 'var(--cm-color)';
-      document.getElementById("selectedStatus").style.color = statusColor;
-    }
 
-    function applyPreset(element, modelName, mode, base, size, gap, count) {
-      document.querySelectorAll('.preset-badge').forEach(b => b.classList.remove('active'));
-      element.classList.add('active');
 
-      document.getElementById("baseSelect").value = base;
-      document.getElementById("blockSize").value = size;
-      document.getElementById("gapSelect").value = gap;
-      document.getElementById("blockCountSelect").value = count;
 
-      setMode(mode);
-      updateStatusDisplay(modelName);
-    }
 
-    const BASE_MAP = {
-      16: "0123456789ABCDEF",
-      36: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    };
+    <!-- Upload -->
 
-    function toBase(val, base, len) {
-      const chars = BASE_MAP[base];
-      let r = "";
-      if (val === 0) r = chars[0];
-      while (val > 0) {
-        r = chars[val % base] + r;
-        val = Math.floor(val / base);
-      }
-      return r.padStart(len, "0");
-    }
 
-    function fromBase(str, base) {
-      const chars = BASE_MAP[base];
-      let r = 0;
-      for (let c of str) {
-        r = r * base + chars.indexOf(c);
-      }
-      return r;
-    }
+    <div class="card">
 
-    /**
-     * 核心邏輯修正：動態傳入 prefix 的奇偶判定
-     */
-    function checkIsDesc(prefix, base, modeName) {
-      if (modeName === 'CM' || currentMode === 'CM') {
-        // 【CM 新規則】前兩碼拆開，各自轉十進位後相加。偶數固定降冪 (DESC)，奇數升冪 (ASC)
-        const char1Val = BASE_MAP[base].indexOf(prefix[0]);
-        const char2Val = BASE_MAP[base].indexOf(prefix[1]);
-        const combinedVal = char1Val + char2Val;
-        return (combinedVal % 2 === 0); 
-      } else {
-        // 【舊型號規則】單看第二位字元的奇偶數
-        const secondChar = prefix.substring(1, 2);
-        const index = BASE_MAP[36].indexOf(secondChar);
-        const isEven = (index % 2 === 0);
-        return (currentMode === 'VL') ? isEven : !isEven; 
-      }
-    }
 
-    let csvData = "";
+      <div class="title">
 
-    function generate() {
-      const base = parseInt(document.getElementById("baseSelect").value);
-      const ps = document.getElementById("prefixStart").value.toUpperCase();
-      const pe = document.getElementById("prefixEnd").value.toUpperCase();
-      const blockSize = parseInt(document.getElementById("blockSize").value);
-      const blockCount = parseInt(document.getElementById("blockCountSelect").value);
-      const gap = parseInt(document.getElementById("gapSelect").value);
+        ① Upload lotFile.csv
 
-      if (!ps || !pe || !blockSize) {
-        alert("請輸入完整參數");
-        return;
-      }
+      </div>
 
-      // 抓取目前型號名稱
-      const statusBarText = document.getElementById("selectedStatus").innerText;
-      const modelMatch = statusBarText.match(/目前型號：([^|]+)/);
-      const modelName = modelMatch ? modelMatch[1].trim() : "";
 
-      let startP = fromBase(ps, base);
-      let endP = fromBase(pe, base);
-      let lines = [];
 
-      // 表頭 (1, 2, 3...)
-      let header = [];
-      for (let i = 1; i <= blockSize; i++) header.push(i);
-      lines.push(header.join(","));
 
-      // 跑每一組大前置碼段
-      for (let p = startP; p <= endP; p++) {
-        let currentPrefix = toBase(p, base, 2);
-        let startValue = fromBase(currentPrefix + "00", base);
+      <div id="dropZone" class="drop-zone">
 
-        // 依據區段數量產出每一條 Bar 
-        for (let g = 0; g < blockCount; g++) {
-          let chipIDs = [];
-          
-          // 先用暫時產出的第一個 Chip ID 抓出物理上它真正的 OCR 前兩碼
-          let sampleId = toBase(startValue, base, 4);
-          let realPrefix = sampleId.substring(0, 2);
 
-          // 核心修正：改用當前物理前兩碼判定升降冪
-          let isDesc = checkIsDesc(realPrefix, base, modelName);
+        <span>
+          Drag & Drop CSV File
+        </span>
 
-          for (let i = 0; i < blockSize; i++) {
-            chipIDs.push(toBase(startValue + i, base, 4));
+
+        <span>
+          or Click Here
+        </span>
+
+
+
+        <input id="fileInput" type="file" accept=".csv" hidden>
+
+
+      </div>
+
+
+
+      <div id="fileInfo" class="file-info">
+
+        No File Loaded
+
+      </div>
+
+
+
+
+      <div id="debugInfo">
+
+      </div>
+
+
+
+
+      <button id="analyzeBtn">
+
+        Start Analysis
+
+      </button>
+
+
+
+    </div>
+
+
+
+
+
+
+
+
+
+    <!-- Report -->
+
+
+
+    <div id="reportArea" class="hidden">
+
+
+
+
+
+      <div class="card">
+
+
+        <div class="title">
+
+          ② ChipID Summary
+
+        </div>
+
+
+
+        <div class="summary-grid">
+
+
+          <div class="summary-box">
+
+            <div class="summary-label">
+
+              Total Die
+
+            </div>
+
+            <div id="totalDie" class="summary-value">
+              -
+            </div>
+
+
+          </div>
+
+
+
+
+
+          <div class="summary-box">
+
+            <div class="summary-label">
+
+              Unique ChipID
+
+            </div>
+
+            <div id="uniqueChip" class="summary-value">
+              -
+            </div>
+
+
+          </div>
+
+
+
+
+
+          <div class="summary-box">
+
+            <div class="summary-label">
+
+              Duplicate
+
+            </div>
+
+            <div id="duplicateCount" class="summary-value">
+              -
+            </div>
+
+
+          </div>
+
+
+
+
+
+          <div class="summary-box">
+
+            <div class="summary-label">
+
+              Missing
+
+            </div>
+
+            <div id="missingCount" class="summary-value">
+              -
+            </div>
+
+
+          </div>
+
+
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+
+
+
+
+      <div class="card">
+
+
+        <div class="title">
+
+          ③ ChipID Rule Analysis
+
+        </div>
+
+
+        <div id="ruleReport">
+
+          Waiting...
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+
+
+
+
+      <div class="card">
+
+
+        <div class="title">
+
+          ④ Abnormal ChipID
+
+        </div>
+
+
+
+        <div class="table-box">
+
+
+          <table>
+
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Type
+                </th>
+
+
+                <th>
+                  ChipID
+                </th>
+
+
+                <th>
+                  BinX
+                </th>
+
+
+                <th>
+                  BinY
+                </th>
+
+
+                <th>
+                  Description
+                </th>
+
+
+              </tr>
+
+
+            </thead>
+
+
+            <tbody id="errorTable">
+
+            </tbody>
+
+
+          </table>
+
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+
+
+
+
+      <div class="card">
+
+
+        <div class="title">
+
+          ⑤ Wafer Scan Pattern
+
+        </div>
+
+
+        <div id="scanReport">
+
+          -
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+
+
+
+
+      <div class="card">
+
+
+        <div class="title">
+
+          ⑥ Wafer Map
+
+        </div>
+
+
+
+        <div id="waferMap">
+
+          -
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+
+
+    <div class="footer">
+
+      ChipID Reverse Analysis Tool V2.0
+
+    </div>
+
+
+
+
+
+
+
+    <script>
+      // =====================================================
+      // ChipID Reverse Analysis Tool V2
+      // PART B
+      // CSV Parser + ChipID Analysis Engine
+      // =====================================================
+
+
+
+      // ===============================
+      // Global Variables
+      // ===============================
+
+      let csvData = [];
+
+      let fileName = "";
+
+      let chipField = "";
+      let binXField = "";
+      let binYField = "";
+
+
+
+      const BASE36 =
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+
+
+
+
+      // ===============================
+      // Drag & Drop Fix
+      // ===============================
+
+
+      [
+        "dragenter",
+        "dragover",
+        "dragleave",
+        "drop"
+      ].forEach(
+        eventName => {
+
+
+          document.addEventListener(
+            eventName,
+            e => {
+
+              e.preventDefault();
+              e.stopPropagation();
+
+            },
+            false
+          );
+
+
+        });
+
+
+
+
+
+
+      const dropZone =
+        document.getElementById(
+          "dropZone"
+        );
+
+
+      const fileInput =
+        document.getElementById(
+          "fileInput"
+        );
+
+
+
+      const fileInfo =
+        document.getElementById(
+          "fileInfo"
+        );
+
+
+
+
+
+      dropZone.onclick = () => {
+
+        fileInput.click();
+
+      };
+
+
+
+
+
+      dropZone.addEventListener(
+        "dragover",
+        () => {
+
+          dropZone.classList.add(
+            "dragover"
+          );
+
+        });
+
+
+
+
+
+      dropZone.addEventListener(
+        "dragleave",
+        () => {
+
+          dropZone.classList.remove(
+            "dragover"
+          );
+
+        });
+
+
+
+
+
+
+      dropZone.addEventListener(
+        "drop",
+        e => {
+
+
+          dropZone.classList.remove(
+            "dragover"
+          );
+
+
+          let file =
+            e.dataTransfer.files[0];
+
+
+          if (file) {
+
+            loadCSV(file);
+
           }
 
-          if (isDesc) {
-            chipIDs.reverse();
+
+        });
+
+
+
+
+
+
+      fileInput.onchange = () => {
+
+
+        loadCSV(
+          fileInput.files[0]
+        );
+
+
+      };
+
+
+
+
+
+
+
+
+      // ===============================
+      // Load CSV
+      // ===============================
+
+
+      function loadCSV(file) {
+
+
+        fileName =
+          file.name;
+
+
+        fileInfo.innerHTML =
+
+          `
+Loaded File:
+<b>${file.name}</b>
+`;
+
+
+
+        let reader =
+          new FileReader();
+
+
+
+        reader.onload = e => {
+
+
+          parseCSV(
+            e.target.result
+          );
+
+
+        };
+
+
+
+        reader.readAsText(
+          file,
+          "UTF-8"
+        );
+
+
+      }
+
+
+
+
+
+
+
+
+      // ===============================
+      // CSV Parser
+      // Auto Detect Header Row
+      // ===============================
+
+
+      function parseCSV(text) {
+
+
+        text =
+          text.replace(
+            /^\uFEFF/,
+            ""
+          );
+
+
+
+        let lines =
+          text
+            .replace(/\r/g, "")
+            .split("\n")
+            .filter(
+              x => x.trim() != ""
+            );
+
+
+
+
+
+        let headerIndex =
+          0;
+
+
+
+        // search header
+
+
+        for (
+          let i = 0;
+          i < Math.min(5, lines.length);
+          i++
+        ) {
+
+
+          let line =
+            lines[i].toLowerCase();
+
+
+
+          if (
+            line.includes("chipid")
+            ||
+            line.includes("binx")
+          ) {
+
+
+            headerIndex = i;
+
+            break;
+
+
           }
 
-          lines.push(chipIDs.join(","));
-          startValue += blockSize + gap; // 數列數值累加
+
         }
+
+
+
+
+
+        let headers =
+          splitCSV(
+            lines[headerIndex]
+          );
+
+
+
+
+
+        csvData = [];
+
+
+
+
+
+        for (
+          let i = headerIndex + 1;
+          i < lines.length;
+          i++
+        ) {
+
+
+
+          let values =
+            splitCSV(
+              lines[i]
+            );
+
+
+
+          let obj = {};
+
+
+
+          headers.forEach(
+            (h, index) => {
+
+
+              obj[
+                h.trim()
+              ] =
+                values[index]
+                  ?
+                  values[index].trim()
+                  :
+                  "";
+
+
+            });
+
+
+
+          csvData.push(obj);
+
+
+        }
+
+
+
+
+
+
+        detectColumns();
+
+
+
+
+
+        document
+          .getElementById(
+            "debugInfo"
+          )
+          .innerHTML =
+
+
+          `
+<pre>
+
+Header Row:
+${headerIndex + 1}
+
+Rows:
+${csvData.length}
+
+ChipID:
+${chipField}
+
+BinX:
+${binXField}
+
+BinY:
+${binYField}
+
+</pre>
+`;
+
+
+
+
+
+        console.log(
+          csvData
+        );
+
+
       }
 
-      csvData = lines.join("\n");
-      document.getElementById("output").value = csvData;
-    }
 
-    function downloadCSV() {
-      if (!csvData) {
-        alert("請先產生資料");
-        return;
+
+
+
+
+
+      // CSV split with quote support
+
+
+      function splitCSV(line) {
+
+
+        let result = [];
+
+        let current = "";
+
+        let quote = false;
+
+
+
+        for (
+          let i = 0;
+          i < line.length;
+          i++
+        ) {
+
+
+          let c = line[i];
+
+
+
+          if (c == '"') {
+
+            quote = !quote;
+
+          }
+          else if (
+            c == "," &&
+            !quote
+          ) {
+
+
+            result.push(current);
+
+            current = "";
+
+
+          }
+          else {
+
+            current += c;
+
+          }
+
+
+        }
+
+
+
+        result.push(current);
+
+
+        return result;
+
+
       }
-      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvData], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ChipID_${currentMode}_Result.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  </script>
+
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Detect Column
+      // ===============================
+
+
+      function detectColumns() {
+
+
+        let headers =
+          Object.keys(
+            csvData[0]
+          );
+
+
+
+
+
+        chipField =
+          findHeader(
+            headers,
+            [
+              "chipid",
+              "chip_id",
+              "chip id"
+            ]
+          );
+
+
+
+        binXField =
+          findHeader(
+            headers,
+            [
+              "binx",
+              "bin_x"
+            ]
+          );
+
+
+
+        binYField =
+          findHeader(
+            headers,
+            [
+              "biny",
+              "bin_y"
+            ]
+          );
+
+
+
+      }
+
+
+
+
+
+
+      function findHeader(
+        headers,
+        names
+      ) {
+
+
+        for (let h of headers) {
+
+
+          let x =
+            h.toLowerCase()
+              .replace(/_/g, "")
+              .replace(/\s/g, "");
+
+
+
+          for (
+            let n of names
+          ) {
+
+
+            let y =
+              n.toLowerCase()
+                .replace(/_/g, "")
+                .replace(/\s/g, "");
+
+
+
+            if (x == y)
+              return h;
+
+
+          }
+
+
+        }
+
+
+        return "";
+
+      }
+
+
+
+
+
+
+
+
+      // ===============================
+      // Start Analysis
+      // ===============================
+
+
+      document
+        .getElementById(
+          "analyzeBtn"
+        )
+        .onclick = () => {
+
+
+          if (csvData.length == 0) {
+
+            alert(
+              "No CSV Loaded"
+            );
+
+            return;
+
+          }
+
+
+
+          runAnalysis();
+
+
+        };
+
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Main Analysis
+      // ===============================
+
+
+      function runAnalysis() {
+
+
+        let chips =
+          csvData.map(
+            row => {
+
+
+              return {
+
+
+                chip:
+                  row[chipField],
+
+
+                binX:
+                  row[binXField],
+
+
+                binY:
+                  row[binYField]
+
+
+              };
+
+
+            })
+            .filter(
+              x => x.chip
+            );
+
+
+
+
+
+        let duplicate =
+          detectDuplicate(
+            chips
+          );
+
+
+
+
+        let missing =
+          estimateMissing(
+            chips
+          );
+
+
+
+
+
+
+        document
+          .getElementById(
+            "reportArea"
+          )
+          .classList.remove(
+            "hidden"
+          );
+
+
+
+
+        document
+          .getElementById(
+            "totalDie"
+          )
+          .innerText =
+          chips.length;
+
+
+
+
+        document
+          .getElementById(
+            "uniqueChip"
+          )
+          .innerText =
+          new Set(
+            chips.map(x => x.chip)
+          ).size;
+
+
+
+
+        document
+          .getElementById(
+            "duplicateCount"
+          )
+          .innerText =
+          duplicate.length;
+
+
+
+
+        document
+          .getElementById(
+            "missingCount"
+          )
+          .innerText =
+          missing.length;
+
+
+
+
+
+
+        document
+          .getElementById(
+            "ruleReport"
+          )
+          .innerHTML =
+          analyzeRule(
+            chips
+          );
+
+
+
+
+
+
+        showException(
+          duplicate,
+          missing
+        );
+
+
+
+
+        analyzeScan(
+          chips
+        );
+
+
+        generateMap(
+          chips
+        );
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // ChipID Decode
+      // ===============================
+
+
+      function decodeChipID(id) {
+
+
+        if (!id ||
+          id.length != 4)
+          return null;
+
+
+
+        return {
+
+
+          prefix:
+            id.substring(0, 2),
+
+
+
+          x:
+            id[2],
+
+
+
+          y:
+            id[3],
+
+
+
+          xValue:
+            base36(id[2]),
+
+
+
+          yValue:
+            base36(id[3])
+
+
+        };
+
+
+
+      }
+
+
+
+
+
+
+      function base36(c) {
+
+
+        return BASE36.indexOf(
+          c.toUpperCase()
+        );
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Duplicate
+      // ===============================
+
+
+      function detectDuplicate(data) {
+
+
+        let map = {};
+
+        let result = [];
+
+
+
+        data.forEach(
+          d => {
+
+
+            if (map[d.chip]) {
+
+              result.push(d);
+
+            }
+            else {
+
+              map[d.chip] = 1;
+
+            }
+
+
+          });
+
+
+
+        return result;
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Missing Die
+      // ===============================
+
+
+      function estimateMissing(data) {
+
+
+        let result = [];
+
+        let exist = {};
+
+
+
+        data.forEach(
+          d => {
+
+
+            exist[
+              d.binX + "_" + d.binY
+            ] = true;
+
+
+          });
+
+
+
+        let xs =
+          data
+            .map(
+              d => Number(d.binX)
+            )
+            .filter(
+              x => !isNaN(x)
+            );
+
+
+
+        let ys =
+          data
+            .map(
+              d => Number(d.binY)
+            )
+            .filter(
+              x => !isNaN(x)
+            );
+
+
+
+        if (xs.length == 0)
+          return [];
+
+
+
+        let minX = Math.min(...xs);
+        let maxX = Math.max(...xs);
+
+        let minY = Math.min(...ys);
+        let maxY = Math.max(...ys);
+
+
+
+
+
+        for (
+          let x = minX;
+          x <= maxX;
+          x++
+        ) {
+
+          for (
+            let y = minY;
+            y <= maxY;
+            y++
+          ) {
+
+
+            if (
+              !exist[x + "_" + y]
+            ) {
+
+
+              result.push({
+
+                binX: x,
+
+                binY: y
+
+              });
+
+
+            }
+
+
+          }
+
+
+        }
+
+
+
+        return result;
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Rule Analysis
+      // ===============================
+
+
+      function analyzeRule(data) {
+
+
+        let prefix = {};
+
+
+
+        data.forEach(
+          d => {
+
+
+            let p =
+              decodeChipID(
+                d.chip
+              );
+
+
+            if (p) {
+
+              prefix[p.prefix]
+                =
+                (prefix[p.prefix] || 0) + 1;
+
+            }
+
+
+          });
+
+
+
+
+
+        let prefixHTML =
+          Object.keys(prefix)
+            .map(
+              p =>
+                `
+<span class="tag">
+${p}
+</span>
+`
+            )
+            .join("");
+
+
+
+
+
+        return
+
+
+        `
+
+<b>
+Prefix Pattern
+</b>
+
+<br>
+
+${prefixHTML}
+
+
+<br><br>
+
+
+<b>
+Last Two Digit Direction
+</b>
+
+<br>
+
+${sequenceRule(data)}
+
+
+`;
+
+      }
+
+
+
+
+
+      function sequenceRule(data) {
+
+
+        let x = [];
+
+        let y = [];
+
+
+
+        data.forEach(
+          d => {
+
+
+            let p =
+              decodeChipID(
+                d.chip
+              );
+
+
+
+            if (p) {
+
+              x.push(p.xValue);
+
+              y.push(p.yValue);
+
+            }
+
+
+          });
+
+
+
+        return
+
+        `
+
+CH3:
+
+${x[x.length - 1] > x[0] ?
+            "Ascending" :
+            "Descending"}
+
+<br>
+
+
+CH4:
+
+${y[y.length - 1] > y[0] ?
+            "Ascending" :
+            "Descending"}
+
+`;
+
+      }
+
+
+      // =====================================================
+      // ChipID Reverse Analysis Tool V2
+      // PART C
+      // Report Generator + Wafer Map + Export
+      // =====================================================
+
+
+
+      // ===============================
+      // Exception Table
+      // ===============================
+
+
+      function showException(
+        duplicates,
+        missing
+      ) {
+
+        let tbody =
+          document.getElementById(
+            "errorTable"
+          );
+
+
+        tbody.innerHTML = "";
+
+
+
+        // Duplicate
+
+        duplicates.forEach(
+          d => {
+
+
+            let tr =
+              document.createElement(
+                "tr"
+              );
+
+
+            tr.innerHTML =
+              `
+
+<td class="bad">
+Duplicate
+</td>
+
+
+<td>
+${d.chip}
+</td>
+
+
+<td>
+${d.binX}
+</td>
+
+
+<td>
+${d.binY}
+</td>
+
+
+<td>
+ChipID duplicated
+</td>
+
+`;
+
+
+
+            tbody.appendChild(tr);
+
+
+          });
+
+
+
+
+        // Missing
+
+        missing.forEach(
+          d => {
+
+
+            let tr =
+              document.createElement(
+                "tr"
+              );
+
+
+            tr.innerHTML =
+              `
+
+<td class="bad">
+Missing
+</td>
+
+
+<td>
+-
+</td>
+
+
+<td>
+${d.binX}
+</td>
+
+
+<td>
+${d.binY}
+</td>
+
+
+<td>
+Possible missing Die
+</td>
+
+`;
+
+
+
+            tbody.appendChild(tr);
+
+
+          });
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Scan Pattern Detection
+      // ===============================
+
+
+      function analyzeScan(data) {
+
+
+        let points = [];
+
+
+
+        data.forEach(
+          d => {
+
+
+            let x =
+              Number(d.binX);
+
+
+            let y =
+              Number(d.binY);
+
+
+
+            if (
+              !isNaN(x) &&
+              !isNaN(y)
+            ) {
+
+
+              points.push({
+
+                x: x,
+
+                y: y,
+
+                chip: d.chip
+
+              });
+
+
+            }
+
+
+          });
+
+
+
+
+        if (points.length < 5) {
+
+          document
+            .getElementById(
+              "scanReport"
+            )
+            .innerHTML =
+            "No enough data";
+
+
+          return;
+
+        }
+
+
+
+
+        let rowChange = 0;
+
+        let reverseCount = 0;
+
+
+
+
+        for (
+          let i = 1;
+          i < points.length;
+          i++
+        ) {
+
+
+          if (
+            points[i].y <
+            points[i - 1].y
+          ) {
+
+            reverseCount++;
+
+          }
+
+
+          if (
+            points[i].x !=
+            points[i - 1].x
+          ) {
+
+            rowChange++;
+
+          }
+
+
+        }
+
+
+
+
+
+        let reverseRatio =
+          reverseCount /
+          points.length;
+
+
+
+        let result = "";
+
+
+
+        if (
+          reverseRatio > 0.35
+          &&
+          rowChange > 0
+        ) {
+
+
+          result =
+            `
+
+<span class="tag">
+Snake Scan Detected
+</span>
+
+
+<br>
+
+
+Reverse Direction Ratio:
+
+${(reverseRatio * 100).toFixed(1)}%
+
+`;
+
+
+
+        }
+
+        else {
+
+
+          result =
+            `
+
+<span class="tag good">
+Normal Scan
+</span>
+
+
+<br>
+
+
+Reverse Direction Ratio:
+
+${(reverseRatio * 100).toFixed(1)}%
+
+`;
+
+
+
+        }
+
+
+
+
+        document
+          .getElementById(
+            "scanReport"
+          )
+          .innerHTML =
+          result;
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Wafer Map Generator
+      // ===============================
+
+
+      function generateMap(data) {
+
+
+        let map = {};
+
+
+        let xs = [];
+
+        let ys = [];
+
+
+
+        data.forEach(
+          d => {
+
+
+            let x =
+              Number(d.binX);
+
+
+            let y =
+              Number(d.binY);
+
+
+
+            if (
+              !isNaN(x)
+              &&
+              !isNaN(y)
+            ) {
+
+
+              xs.push(x);
+
+              ys.push(y);
+
+
+
+              map[
+                x + "_" + y
+              ] =
+                d.chip;
+
+
+            }
+
+
+          });
+
+
+
+
+
+        if (xs.length == 0)
+          return;
+
+
+
+
+        let minX =
+          Math.min(...xs);
+
+
+        let maxX =
+          Math.max(...xs);
+
+
+
+        let minY =
+          Math.min(...ys);
+
+
+        let maxY =
+          Math.max(...ys);
+
+
+
+
+
+
+        let html =
+          "<table>";
+
+
+
+
+        html +=
+          `
+
+<tr>
+
+<th>
+X/Y
+</th>
+
+`;
+
+
+
+        for (
+          let y = minY;
+          y <= maxY;
+          y++
+        ) {
+
+
+          html +=
+            `
+
+<th>
+${y}
+</th>
+
+`;
+
+
+        }
+
+
+        html += "</tr>";
+
+
+
+
+
+
+        for (
+          let x = minX;
+          x <= maxX;
+          x++
+        ) {
+
+
+          html +=
+            `
+
+<tr>
+
+<th>
+${x}
+</th>
+
+`;
+
+
+
+
+
+          for (
+            let y = minY;
+            y <= maxY;
+            y++
+          ) {
+
+
+            let chip =
+              map[
+              x + "_" + y
+              ];
+
+
+
+            if (chip) {
+
+
+              html +=
+                `
+
+<td class="good">
+
+${chip}
+
+</td>
+
+`;
+
+
+            }
+            else {
+
+
+              html +=
+                `
+
+<td class="bad">
+
+-
+
+</td>
+
+`;
+
+
+
+            }
+
+
+
+          }
+
+
+          html += "</tr>";
+
+
+
+        }
+
+
+
+        html += "</table>";
+
+
+
+
+
+
+        document
+          .getElementById(
+            "waferMap"
+          )
+          .innerHTML =
+          html;
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Sequence Abnormal Detection
+      // ===============================
+
+
+      function detectSequenceError(data) {
+
+
+        let result = [];
+
+
+
+        for (
+          let i = 1;
+          i < data.length;
+          i++
+        ) {
+
+
+          let prev =
+            decodeChipID(
+              data[i - 1].chip
+            );
+
+
+
+          let curr =
+            decodeChipID(
+              data[i].chip
+            );
+
+
+
+          if (
+            !prev ||
+            !curr
+          )
+            continue;
+
+
+
+
+          if (
+            prev.prefix ==
+            curr.prefix
+          ) {
+
+
+            let diff =
+              curr.xValue -
+              prev.xValue;
+
+
+
+            if (
+              Math.abs(diff) > 1
+            ) {
+
+
+              result.push({
+
+                chip:
+                  curr,
+
+                reason:
+                  "Sequence Jump"
+
+              });
+
+
+            }
+
+
+
+          }
+
+
+        }
+
+
+
+        return result;
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Export HTML Report
+      // ===============================
+
+
+      function exportReport() {
+
+
+        let report =
+          document
+            .getElementById(
+              "reportArea"
+            )
+            .innerHTML;
+
+
+
+
+        let win =
+          window.open("");
+
+
+
+
+        win.document.write(
+
+          `
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>
+ChipID Reverse Report
+</title>
+
+
+<style>
+
+
+body{
+
+font-family:
+Arial;
+
+padding:
+20px;
+
+}
+
+
+table{
+
+border-collapse:
+collapse;
+
+width:
+100%;
+
+}
+
+
+td,th{
+
+border:
+1px solid #999;
+
+padding:
+8px;
+
+text-align:center;
+
+}
+
+
+
+.good{
+
+background:#e8ffe8;
+
+}
+
+
+.bad{
+
+background:#ffe3e3;
+
+}
+
+
+</style>
+
+
+</head>
+
+
+<body>
+
+
+
+<h1>
+ChipID Reverse Analysis Report
+</h1>
+
+
+${report}
+
+
+</body>
+
+
+</html>
+
+`
+
+        );
+
+
+
+        win.document.close();
+
+
+      }
+
+
+
+
+
+
+
+
+
+      // ===============================
+      // Add Export Button
+      // ===============================
+
+
+      let exportButton =
+        document.createElement(
+          "button"
+        );
+
+
+      exportButton.innerText =
+        "Export HTML Report";
+
+
+
+      exportButton.onclick =
+        exportReport;
+
+
+
+      document
+        .querySelector(
+          ".container"
+        )
+        .appendChild(
+          exportButton
+        );
+
+    </script>
+
+
+
 
 </body>
 
