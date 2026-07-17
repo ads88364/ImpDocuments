@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>進位區段產生器 - RL/VL/CM 三模式版</title>
+
+  <style>
+    /* 簡約風格定義 */
+    :root {
+      --primary-color: #222;
+      --accent-color: #007AFF;
+      --vl-color: #E91E63;
+      --cm-color: #2ec4b6;
+      --bg-color: #f8f9fa;
+      --border-color: #e0e0e0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-color);
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* 型號標籤區域 */
+    .preset-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .preset-badge {
+      padding: 8px 16px;
+      background: #eee;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .preset-badge:hover {
+      background: #e0e0e0;
+    }
+
+    .preset-badge.active {
+      background: var(--primary-color);
+      color: #fff;
+    }
+
+    /* 模式切換區域 (RL / VL / CM) */
+    .mode-switch {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding: 10px;
+      background: #f1f1f1;
+      border-radius: 12px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: 0.2s;
+      text-align: center;
+    }
+
+    .mode-btn.active[data-mode="RL"] {
+      background: var(--accent-color);
+      color: #fff;
+      border-color: var(--accent-color);
+    }
+
+    .mode-btn.active[data-mode="VL"] {
+      background: var(--vl-color);
+      color: #fff;
+      border-color: var(--vl-color);
+    }
+
+    .mode-btn.active[data-mode="CM"] {
+      background: var(--cm-color);
+      color: #fff;
+      border-color: var(--cm-color);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 13px;
+      color: #888;
+      font-weight: 500;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    .status-bar {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 12px;
+      height: 20px;
+      font-weight: 500;
+    }
+
+    button.main-btn {
+      margin-top: 10px;
+      padding: 14px;
+      width: 100%;
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-download {
+      background: #fff;
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      margin-top: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      margin-top: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      background: #fafafa;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h2>進位區段產生器</h2>
+
+    <div class="preset-container">
+      <div class="preset-badge" onclick="applyPreset(this, '283QT', 'RL', 16, 32, 2, 5)">283QT (RL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '283QL', 'RL', 16, 39, 3, 5)">283QL (RL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '283VCL', 'VL', 16, 39, 3, 5)">283VCL (VL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '483VCL', 'VL', 36, 39, 3, 8)">483VCL (VL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '247C', 'VL', 16, 32, 2, 5)">247C (VL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '447CM', 'CM', 36, 32, 2, 8)">447CM (CM)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '447CM', 'RL', 36, 32, 2, 8)">447CM-測試 (CM)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '483QT', 'RL', 16, 32, 2, 7)">483QT (RL)</div>
+      <div class="preset-badge" onclick="applyPreset(this, '483QL', 'RL', 36, 39, 3, 8)">483QL (RL)</div>
+    </div>
+
+    <div class="mode-switch">
+      <div id="modeRL" class="mode-btn active" data-mode="RL" onclick="setMode('RL')">標準模式 (RL: 偶升奇降)</div>
+      <div id="modeVL" class="mode-btn" data-mode="VL" onclick="setMode('VL')">反轉模式 (VL: 偶降奇升)</div>
+      <div id="modeCM" class="mode-btn" data-mode="CM" onclick="setMode('CM')">CM 模式 (偶降奇升-前兩碼相加)</div>
+    </div>
+
+    <div class="form-row">
+      <label>進位</label>
+      <select id="baseSelect">
+        <option value="16">16進位</option>
+        <option value="36">36進位</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>前兩碼起始</label>
+      <input id="prefixStart" placeholder="例如: 1E">
+    </div>
+
+    <div class="form-row">
+      <label>前兩碼結束</label>
+      <input id="prefixEnd" placeholder="例如: 2H">
+    </div>
+
+    <div class="form-row">
+      <label>每列數量</label>
+      <input id="blockSize" type="number">
+    </div>
+
+    <div class="form-row">
+      <label>區段數量 (組數)</label>
+      <select id="blockCountSelect"></select>
+    </div>
+
+    <div class="form-row">
+      <label>間隔 gap</label>
+      <select id="gapSelect"></select>
+    </div>
+
+    <button class="main-btn" onclick="generate()">產生資料</button>
+
+    <div id="selectedStatus" class="status-bar">尚未選取型號</div>
+
+    <button class="main-btn btn-download" onclick="downloadCSV()">下載 CSV</button>
+
+    <textarea id="output" readonly></textarea>
+
+  </div>
+
+  <script>
+    let currentMode = 'RL';
+
+    const GAP_OPTIONS = [2, 3];
+    const BLOCK_COUNT_OPTIONS = [5, 7, 8];
+
+    function initDropdowns() {
+      const gapSelect = document.getElementById("gapSelect");
+      const blockSelect = document.getElementById("blockCountSelect");
+      GAP_OPTIONS.forEach(v => gapSelect.add(new Option(v, v)));
+      BLOCK_COUNT_OPTIONS.forEach(v => blockSelect.add(new Option(v, v)));
+    }
+    initDropdowns();
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+
+      if (mode === 'RL') document.getElementById('modeRL').classList.add('active');
+      else if (mode === 'VL') document.getElementById('modeVL').classList.add('active');
+      else if (mode === 'CM') document.getElementById('modeCM').classList.add('active');
+
+      updateStatusDisplay();
+    }
+
+    function updateStatusDisplay(modelName = "") {
+      let modeText = "標準(RL)";
+      if (currentMode === 'VL') modeText = "反轉(VL)";
+      if (currentMode === 'CM') modeText = "CM新規則";
+
+      const currentModel = modelName || document.getElementById("selectedStatus").innerText.split('：')[1] || "未選取";
+      document.getElementById("selectedStatus").innerText = `目前型號：${currentModel} | 規律：${modeText}`;
+
+      let statusColor = 'var(--accent-color)';
+      if (currentMode === 'VL') statusColor = 'var(--vl-color)';
+      if (currentMode === 'CM') statusColor = 'var(--cm-color)';
+      document.getElementById("selectedStatus").style.color = statusColor;
+    }
+
+    function applyPreset(element, modelName, mode, base, size, gap, count) {
+      document.querySelectorAll('.preset-badge').forEach(b => b.classList.remove('active'));
+      element.classList.add('active');
+
+      document.getElementById("baseSelect").value = base;
+      document.getElementById("blockSize").value = size;
+      document.getElementById("gapSelect").value = gap;
+      document.getElementById("blockCountSelect").value = count;
+
+      setMode(mode);
+      updateStatusDisplay(modelName);
+    }
+
+    const BASE_MAP = {
+      16: "0123456789ABCDEF",
+      36: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    };
+
+    function toBase(val, base, len) {
+      const chars = BASE_MAP[base];
+      let r = "";
+      if (val === 0) r = chars[0];
+      while (val > 0) {
+        r = chars[val % base] + r;
+        val = Math.floor(val / base);
+      }
+      return r.padStart(len, "0");
+    }
+
+    function fromBase(str, base) {
+      const chars = BASE_MAP[base];
+      let r = 0;
+      for (let c of str) {
+        r = r * base + chars.indexOf(c);
+      }
+      return r;
+    }
+
+    /**
+     * 核心邏輯修正：動態傳入 prefix 的奇偶判定
+     */
+    function checkIsDesc(prefix, base, modeName) {
+      if (modeName === 'CM' || currentMode === 'CM') {
+        // 【CM 新規則】前兩碼拆開，各自轉十進位後相加。偶數固定降冪 (DESC)，奇數升冪 (ASC)
+        const char1Val = BASE_MAP[base].indexOf(prefix[0]);
+        const char2Val = BASE_MAP[base].indexOf(prefix[1]);
+        const combinedVal = char1Val + char2Val;
+        return (combinedVal % 2 === 0); 
+      } else {
+        // 【舊型號規則】單看第二位字元的奇偶數
+        const secondChar = prefix.substring(1, 2);
+        const index = BASE_MAP[36].indexOf(secondChar);
+        const isEven = (index % 2 === 0);
+        return (currentMode === 'VL') ? isEven : !isEven; 
+      }
+    }
+
+    let csvData = "";
+
+    function generate() {
+      const base = parseInt(document.getElementById("baseSelect").value);
+      const ps = document.getElementById("prefixStart").value.toUpperCase();
+      const pe = document.getElementById("prefixEnd").value.toUpperCase();
+      const blockSize = parseInt(document.getElementById("blockSize").value);
+      const blockCount = parseInt(document.getElementById("blockCountSelect").value);
+      const gap = parseInt(document.getElementById("gapSelect").value);
+
+      if (!ps || !pe || !blockSize) {
+        alert("請輸入完整參數");
+        return;
+      }
+
+      // 抓取目前型號名稱
+      const statusBarText = document.getElementById("selectedStatus").innerText;
+      const modelMatch = statusBarText.match(/目前型號：([^|]+)/);
+      const modelName = modelMatch ? modelMatch[1].trim() : "";
+
+      let startP = fromBase(ps, base);
+      let endP = fromBase(pe, base);
+      let lines = [];
+
+      // 表頭 (1, 2, 3...)
+      let header = [];
+      for (let i = 1; i <= blockSize; i++) header.push(i);
+      lines.push(header.join(","));
+
+      // 跑每一組大前置碼段
+      for (let p = startP; p <= endP; p++) {
+        let currentPrefix = toBase(p, base, 2);
+        let startValue = fromBase(currentPrefix + "00", base);
+
+        // 依據區段數量產出每一條 Bar 
+        for (let g = 0; g < blockCount; g++) {
+          let chipIDs = [];
+          
+          // 先用暫時產出的第一個 Chip ID 抓出物理上它真正的 OCR 前兩碼
+          let sampleId = toBase(startValue, base, 4);
+          let realPrefix = sampleId.substring(0, 2);
+
+          // 核心修正：改用當前物理前兩碼判定升降冪
+          let isDesc = checkIsDesc(realPrefix, base, modelName);
+
+          for (let i = 0; i < blockSize; i++) {
+            chipIDs.push(toBase(startValue + i, base, 4));
+          }
+
+          if (isDesc) {
+            chipIDs.reverse();
+          }
+
+          lines.push(chipIDs.join(","));
+          startValue += blockSize + gap; // 數列數值累加
+        }
+      }
+
+      csvData = lines.join("\n");
+      document.getElementById("output").value = csvData;
+    }
+
+    function downloadCSV() {
+      if (!csvData) {
+        alert("請先產生資料");
+        return;
+      }
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvData], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ChipID_${currentMode}_Result.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+
+</body>
+
+</html>
