@@ -72,7 +72,7 @@
 
   <body>
     <div class="container">
-      <h2>36進位產生器(數量39 間隔3 組數8)</h2>
+      <h2>36進位產生器(數量39 間隔3 組數8 有改(要注意))</h2>
 
       <label>前兩碼起始</label>
       <input id="prefixStart" maxlength="2" placeholder="00" />
@@ -93,8 +93,8 @@
       let csvData = "";
 
       // ⭐ 固定規則（可自行改）
-      const BLOCK_SIZE = 39; // 每列數量
-      const GAP = 3; // 區段間隔
+      const BLOCK_SIZE = 32; // 每列數量 39
+      const GAP = 2; // 區段間隔  3
 
       function generate() {
         const prefixStart = document
